@@ -25,6 +25,8 @@ data Expr
     | Tick String
     | U
     | The Expr Expr
+    | Rec Ty Expr Expr Expr -- TODO Delete this later
+    | Ann Expr Ty  -- TODO Delete this later
     deriving (Eq, Show)
 
 data Value
@@ -36,6 +38,62 @@ data Neutral
     = NVar Name
     | NApp Neutral Value
     deriving (Show)
+
+-- type stuff
+
+data Ty
+    = TNat
+    | TArr Ty Ty
+    deriving (Eq, Show)
+
+type Context = Env Ty
+initCtx :: Context
+initCtx = initEnv
+
+synth :: Context -> Expr -> Either Message Ty
+synth ctx (Var x) = lookupVar ctx x     -- variables
+synth ctx (App rator rand) = do         -- function application
+    ty <- synth ctx rator
+    case ty of
+        TArr argT retT -> do 
+            check ctx rand argT
+            Right retT
+        other -> failure ("Not a function type: " ++ show other)
+synth ctx (Rec ty tgt base step) = do   -- recursion
+    tgtT <- synth ctx tgt
+    case tgtT of
+        TNat -> do 
+            check ctx base tgtT
+            check ctx step (TArr TNat (TArr ty ty))
+            Right ty
+        other -> failure ("Not the type Nat: " ++ show other)
+synth ctx (Ann e t) = do                -- function annotation 
+    check ctx e t
+    Right t
+synth _ other =                         -- failure
+    failure ("Can't find a type for " ++ show other ++ ". " ++
+        "Try adding a type annotation.")
+
+check :: Context -> Expr -> Ty -> Either Message ()
+check ctx (Lambda x body) t =           -- lambda
+    case t of
+        TArr arg ret -> check (extend ctx x arg) body ret
+        other -> failure ("Lambda requires a function type, but got " ++ show other)
+check ctx Zero t =                      -- zero
+    case t of
+        TNat -> Right ()
+        other -> failure ("Zero should be a Nat, but was used where a " ++ show other ++ " was expected")
+check ctx (Add1 n) t =                  -- successor
+    case t of
+        TNat -> check ctx n TNat
+        other -> failure ("Add1 should be a Nat, but was used where a " ++ show other ++ " was expected")
+check ctx other t = do                  -- mode change
+    t' <- synth ctx other
+    if t' == t
+        then Right ()
+        else failure ("Expected " ++ show t ++ " but got " ++ show t')
+
+-- end stuff
 
 newtype Name = Name String
     deriving (Show, Eq)
@@ -96,32 +154,44 @@ normalize expr = do
     val <- eval initEnv expr
     readBack [ ] val
 
-runProgram :: [(Name, Expr)] -> Expr -> Either Message Expr
-runProgram defs expr = do 
-    env <- addDefs initEnv defs
-    val <- eval env expr
-    readBack (map fst defs) val
+-- runProgram :: [(Name, Expr)] -> Expr -> Either Message Expr
+-- runProgram defs expr = do 
+--     env <- addDefs initEnv defs
+--     val <- eval env expr
+--     readBack (map fst defs) val
 
-addDefs :: Env Value -> [(Name, Expr)] -> Either Message (Env Value)
-addDefs env [ ] = Right env
-addDefs env ((x, e) : defs) = do 
-    v <- eval env e
-    addDefs (extend env x v) defs
-
+addDefs :: Context -> [(Name, Expr)] -> Either Message Context
+addDefs ctx [ ] = Right ctx
+addDefs ctx ((x, e) : defs) = do 
+    t <- synth ctx e
+    addDefs (extend ctx x t) defs
 
 
 -- Church Numerals testing begin
 
 
-test :: Either Message Expr
-test =
-    runProgram churchDefs
-        (App (App (Var (Name "+"))
-                (toChurch 2))
-            (toChurch 3))
-
-            
-            
+test :: Either Message (Ty, Ty)
+test = do 
+    ctx <- addDefs initCtx
+                [(Name "two",
+                    (Ann (Add1 (Add1 Zero))
+                        TNat)),
+                 (Name "three",
+                    (Ann (Add1 (Add1 (Add1 Zero)))
+                        TNat)),
+                 (Name "+",
+                    (Ann (Lambda (Name "n")
+                            (Lambda (Name "k")
+                                (Rec TNat (Var (Name "n"))
+                                    (Var (Name "k"))
+                                    (Lambda (Name "pred")
+                                        (Lambda (Name "almostSum")
+                                            (Add1 (Var (Name "almostSum"))))))))
+                        (TArr TNat (TArr TNat TNat))))]
+    t1 <- synth ctx (App (Var (Name "+")) (Var (Name "three")))
+    t2 <- synth ctx (App (App (Var (Name "+")) (Var (Name "three")))
+                        (Var (Name "two")))
+    Right (t1, t2)
 
 churchDefs :: [(Name, Expr)]
 churchDefs =
