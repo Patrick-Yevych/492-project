@@ -50,9 +50,9 @@ failure msg = Left (Message msg)
 lookupVar :: Env val -> Name -> Either Message val
 lookupVar (Env [ ]) (Name x) =
     failure ("Not found: " ++ x)
-lookupVar (Env ((y, v) : env0)) x
+lookupVar (Env ((y, v) : env')) x
     | y == x = Right v
-    | otherwise = lookupVar (Env env0) x
+    | otherwise = lookupVar (Env env') x
 
 extend :: Env val -> Name -> val -> Env val
 extend (Env env) x v = Env ((x, v) : env)
