@@ -30,14 +30,23 @@ data Expr
     deriving (Eq, Show)
 
 data Value
-    = VClosure (Env Value) Name Expr
-    | VNeutral Neutral
-    deriving Show
+    = VZero
+    | VAdd1 Value
+    | VClosure (Env Value) Name Expr
+    | VNeutral Ty Neutral
+    deriving (Show)
 
 data Neutral
     = NVar Name
-    | NApp Neutral Value
+    | NApp Neutral Normal
+    | NRec Ty Neutral Normal Normal
     deriving (Show)
+
+data Normal
+    = Normal {normalType :: Ty, normalValue :: Value}
+    deriving (Show)
+
+type Defs = Env Normal
 
 -- type stuff
 
@@ -123,103 +132,126 @@ lookupVar (Env ((y, v) : env0)) x
 extend :: Env val -> Name -> val -> Env val
 extend (Env env) x v = Env ((x, v) : env)
 
-eval :: Env Value -> Expr -> Either Message Value
-eval env (Var x) = lookupVar env x
-eval env (Lambda x body) = Right (VClosure env x body)
-eval env (App rator rand) = do
-        fun <- eval env rator
-        arg <- eval env rand
-        doApply fun arg
+eval :: Env Value -> Expr -> Value
+eval env (Var x) =
+    case lookupVar env x of
+        Left msg -> error ("Internal error: " ++ show msg)
+        Right v -> v
+eval env (Lambda x body) = VClosure env x body
+eval env (App rator rand) = doApply (eval env rator) (eval env rand)
+eval env Zero = VZero
+eval env (Add1 n) = VAdd1 (eval env n)
+eval env (Rec t tgt base step) = doRec t (eval env tgt) (eval env base) (eval env step)
+eval env (Ann e t) = eval env e
 
 
-doApply :: Value -> Value -> Either Message Value
-doApply (VClosure env x body) arg = eval (extend env x arg) body
-doApply (VNeutral neu) arg = Right (VNeutral (NApp neu arg))
+-- doApply :: Value -> Value -> Either Message Value
+-- doApply (VClosure env x body) arg = eval (extend env x arg) body
+-- doApply (VNeutral neu) arg = Right (VNeutral (NApp neu arg))
 
-readBack :: [Name] -> Value -> Either Message Expr
-readBack used (VNeutral (NVar x)) = Right (Var x)
-readBack used (VNeutral (NApp fun arg)) = do 
-    rator <- readBack used (VNeutral fun)
-    rand <- readBack used arg
-    Right (App rator rand)
-readBack used fun@(VClosure _ x _) = 
-    let x' = freshen used x
-    in do
-        bodyVal <- doApply fun (VNeutral (NVar x'))
-        bodyExpr <- readBack (x' : used) bodyVal
-        Right (Lambda x' bodyExpr)
+doApply :: Value -> Value -> Value
+doApply (VClosure env x body) arg =
+    eval (extend env x arg) body
+doApply (VNeutral (TArr t1 t2) neu) arg =
+    VNeutral t2 (NApp neu (Normal t1 arg))
 
-normalize :: Expr -> Either Message Expr
-normalize expr = do 
-    val <- eval initEnv expr
-    readBack [ ] val
+doRec :: Ty -> Value -> Value -> Value -> Value
+doRec t VZero base step = base
+doRec t (VAdd1 n) base step =
+    doApply (doApply step n)
+        (doRec t n base step)
+doRec t (VNeutral TNat neu) base step =
+    VNeutral t
+        (NRec t neu
+            (Normal t base)
+            (Normal (TArr TNat (TArr t t)) step))
 
--- runProgram :: [(Name, Expr)] -> Expr -> Either Message Expr
--- runProgram defs expr = do 
---     env <- addDefs initEnv defs
---     val <- eval env expr
---     readBack (map fst defs) val
+readBackNormal :: [Name] -> Normal -> Expr
+readBackNormal used (Normal t v) = readBack used t v
 
-addDefs :: Context -> [(Name, Expr)] -> Either Message Context
-addDefs ctx [ ] = Right ctx
-addDefs ctx ((x, e) : defs) = do 
-    t <- synth ctx e
-    addDefs (extend ctx x t) defs
+readBack :: [Name] -> Ty -> Value -> Expr
+readBack used TNat VZero = Zero
+readBack used TNat (VAdd1 pred) = Add1 (readBack used TNat pred)
+readBack used (TArr t1 t2) fun =
+    let x = freshen used (argName fun)
+        xVal = VNeutral t1 (NVar x)
+    in Lambda x
+        (readBack used t2
+         (doApply fun xVal))
+    where
+        argName (VClosure _ x _) = x
+        argName _ = Name "x"
+readBack used t1 (VNeutral t2 neu) =
+-- Note: checking t1 and t2 for equality here is a good way to find bugs,
+-- but is not strictly necessary.
+    if t1 == t2
+        then readBackNeutral used neu
+        else error "Internal error: mismatched types at readBackNeutral"
+
+readBackNeutral :: [Name] -> Neutral -> Expr
+readBackNeutral used (NVar x) = Var x
+readBackNeutral used (NApp rator arg) =
+    App (readBackNeutral used rator) (readBackNormal used arg)
+readBackNeutral used (NRec t neu base step) =
+    Rec t (readBackNeutral used neu)
+        (readBackNormal used base)
+        (readBackNormal used step)
+
+noDefs :: Defs
+noDefs = initEnv
+
+defsToContext :: Defs -> Context
+defsToContext defs = fmap normalType defs
+
+defsToEnv :: Defs -> Env Value
+defsToEnv defs = fmap normalValue defs
+
+normWithDefs :: Defs -> Expr -> Either Message Normal
+normWithDefs defs e = do 
+    t <- synth (defsToContext defs) e
+    let v = eval (defsToEnv defs) e
+    Right (Normal t v)
+
+addDefs :: Defs -> [(Name, Expr)] -> Either Message Defs
+addDefs defs [ ] = Right defs
+addDefs defs ((x, e) : more) = do 
+    norm <- normWithDefs defs e
+    addDefs (extend defs x norm) more
+
+definedNames :: Defs -> [Name]
+definedNames (Env defs) = map fst defs
 
 
 -- Church Numerals testing begin
 
+normWithTestDefs :: Expr -> Either Message Expr
+normWithTestDefs e = do 
+    defs <- addDefs noDefs
+            [(Name "two",
+              (Ann (Add1 (Add1 Zero))
+                    TNat)),
+             (Name "three",
+              (Ann (Add1 (Add1 (Add1 Zero)))
+                    TNat)),
+             (Name "+",
+              (Ann (Lambda (Name "n")
+                        (Lambda (Name "k")
+                            (Rec TNat (Var (Name "n"))
+                                (Var (Name "k"))
+                                (Lambda (Name "pred")
+                                    (Lambda (Name "almostSum")
+                                        (Add1 (Var (Name "almostSum"))))))))
+                    (TArr TNat (TArr TNat TNat))))]
+    norm <- normWithDefs defs e
+    Right (readBackNormal (definedNames defs) norm)
 
-test :: Either Message (Ty, Ty)
-test = do 
-    ctx <- addDefs initCtx
-                [(Name "two",
-                    (Ann (Add1 (Add1 Zero))
-                        TNat)),
-                 (Name "three",
-                    (Ann (Add1 (Add1 (Add1 Zero)))
-                        TNat)),
-                 (Name "+",
-                    (Ann (Lambda (Name "n")
-                            (Lambda (Name "k")
-                                (Rec TNat (Var (Name "n"))
-                                    (Var (Name "k"))
-                                    (Lambda (Name "pred")
-                                        (Lambda (Name "almostSum")
-                                            (Add1 (Var (Name "almostSum"))))))))
-                        (TArr TNat (TArr TNat TNat))))]
-    t1 <- synth ctx (App (Var (Name "+")) (Var (Name "three")))
-    t2 <- synth ctx (App (App (Var (Name "+")) (Var (Name "three")))
+test1, test2, test3 :: Either Message Expr
+test1 = normWithTestDefs (Var (Name "+"))
+test2 = normWithTestDefs (App (Var (Name "+"))
+                            (Var (Name "three")))
+test3 = normWithTestDefs (App (App (Var (Name "+"))
+                            (Var (Name "three")))
                         (Var (Name "two")))
-    Right (t1, t2)
-
-churchDefs :: [(Name, Expr)]
-churchDefs =
-    [ (Name "zero",
-        Lambda (Name "f")
-            (Lambda (Name "x")
-                (Var (Name "x"))))
-    , (Name "add1",
-    Lambda (Name "n")
-        (Lambda (Name "f")
-            (Lambda (Name "x")
-                (App (Var (Name "f"))
-                    (App (App (Var (Name "n"))
-                        (Var (Name "f")))
-                            (Var (Name "x")))))))
-    , (Name "+",
-        Lambda (Name "j")
-            (Lambda (Name "k")
-                (Lambda (Name "f")
-                    (Lambda (Name "x")
-                        (App (App (Var (Name "j")) (Var (Name "f")))
-                            (App (App (Var (Name "k")) (Var (Name "f")))
-                                (Var (Name "x"))))))))
-    ]
-toChurch :: Integer -> Expr
-toChurch n
-    | n <= 0 = Var (Name "zero")
-    | otherwise = App (Var (Name "add1")) (toChurch (n - 1))
 
 -- Church Numerals testing end
 
