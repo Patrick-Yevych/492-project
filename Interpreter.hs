@@ -1,6 +1,12 @@
 module Interpreter where
 import Header
 
+-- error messages
+failure :: String -> Either Message a
+failure msg = Left (Message msg)
+
+-- TODO: type checking stuff; put in other file later
+
 synth :: Context -> Expr -> Either Message Ty
 synth ctx (Var x) = lookupVar ctx x     -- variables
 synth ctx (App rator rand) = do         -- function application
@@ -44,47 +50,15 @@ check ctx other t = do                  -- mode change
         then Right ()
         else failure ("Expected " ++ show t ++ " but got " ++ show t')
 
-failure :: String -> Either Message a
-failure msg = Left (Message msg)
+-- TODO: read back stuff; put in other file later
 
-lookupVar :: Env val -> Name -> Either Message val
-lookupVar (Env [ ]) (Name x) =
-    failure ("Not found: " ++ x)
-lookupVar (Env ((y, v) : env')) x
-    | y == x = Right v
-    | otherwise = lookupVar (Env env') x
+nextName :: Name -> Name
+nextName (Name x) = Name (x ++ "'")
 
-extend :: Env val -> Name -> val -> Env val
-extend (Env env) x v = Env ((x, v) : env)
-
-eval :: Env Value -> Expr -> Value
-eval env (Var x) =
-    case lookupVar env x of
-        Left msg -> error ("Internal error: " ++ show msg)
-        Right v -> v
-eval env (Lambda x body) = VClosure env x body
-eval env (App rator rand) = doApply (eval env rator) (eval env rand)
-eval env Zero = VZero
-eval env (Add1 n) = VAdd1 (eval env n)
-eval env (Rec t tgt base step) = doRec t (eval env tgt) (eval env base) (eval env step)
-eval env (Ann e t) = eval env e
-
-doApply :: Value -> Value -> Value
-doApply (VClosure env x body) arg =
-    eval (extend env x arg) body
-doApply (VNeutral (TArr t1 t2) neu) arg =
-    VNeutral t2 (NApp neu (Normal t1 arg))
-
-doRec :: Ty -> Value -> Value -> Value -> Value
-doRec t VZero base step = base
-doRec t (VAdd1 n) base step =
-    doApply (doApply step n)
-        (doRec t n base step)
-doRec t (VNeutral TNat neu) base step =
-    VNeutral t
-        (NRec t neu
-            (Normal t base)
-            (Normal (TArr TNat (TArr t t)) step))
+freshen :: [Name] -> Name -> Name
+freshen used x
+    | elem x used = freshen used (nextName x)
+    | otherwise = x
 
 readBackNormal :: [Name] -> Normal -> Expr
 readBackNormal used (Normal t v) = readBack used t v
@@ -116,6 +90,8 @@ readBackNeutral used (NRec t neu base step) =
     Rec t (readBackNeutral used neu)
         (readBackNormal used base)
         (readBackNormal used step)
+    
+-- TODO: defs stuff, maybe put in another file
 
 noDefs :: Defs
 noDefs = initEnv
@@ -138,13 +114,49 @@ addDefs defs ((x, e) : more) = do
     norm <- normWithDefs defs e
     addDefs (extend defs x norm) more
 
+-- definedNames not called anywhere? may be obsoleted
 definedNames :: Defs -> [Name]
 definedNames (Env defs) = map fst defs
 
-freshen :: [Name] -> Name -> Name
-freshen used x
-    | elem x used = freshen used (nextName x)
-    | otherwise = x
-    
-nextName :: Name -> Name
-nextName (Name x) = Name (x ++ "'")
+-- env stuff
+
+lookupVar :: Env val -> Name -> Either Message val
+lookupVar (Env [ ]) (Name x) =
+    failure ("Not found: " ++ x)
+lookupVar (Env ((y, v) : env')) x
+    | y == x = Right v
+    | otherwise = lookupVar (Env env') x
+
+extend :: Env val -> Name -> val -> Env val
+extend (Env env) x v = Env ((x, v) : env)
+
+-- TODO: eval helpers; put into seperate file after chp6
+
+doApply :: Value -> Value -> Value
+doApply (VClosure env x body) arg =
+    eval (extend env x arg) body
+doApply (VNeutral (TArr t1 t2) neu) arg =
+    VNeutral t2 (NApp neu (Normal t1 arg))
+
+doRec :: Ty -> Value -> Value -> Value -> Value
+doRec t VZero base step = base
+doRec t (VAdd1 n) base step =
+    doApply (doApply step n)
+        (doRec t n base step)
+doRec t (VNeutral TNat neu) base step =
+    VNeutral t
+        (NRec t neu
+            (Normal t base)
+            (Normal (TArr TNat (TArr t t)) step))
+
+eval :: Env Value -> Expr -> Value
+eval env (Var x) =
+    case lookupVar env x of
+        Left msg -> error ("Internal error: " ++ show msg)
+        Right v -> v
+eval env (Lambda x body) = VClosure env x body
+eval env (App rator rand) = doApply (eval env rator) (eval env rand)
+eval env Zero = VZero
+eval env (Add1 n) = VAdd1 (eval env n)
+eval env (Rec t tgt base step) = doRec t (eval env tgt) (eval env base) (eval env step)
+eval env (Ann e t) = eval env e
