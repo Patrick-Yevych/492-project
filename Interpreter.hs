@@ -1,63 +1,5 @@
-main :: IO ()    -- This says that main is an IO action.
-main = return () -- This tells main to do nothing.
-
-data Expr
-    = Var Name
-    | Pi Name Expr Expr
-    | Lambda Name Expr
-    | App Expr Expr
-    | Sigma Name Expr Expr
-    | Cons Expr Expr
-    | Car Expr
-    | Cdr Expr
-    | Nat
-    | Zero
-    | Add1 Expr
-    | IndNat Expr Expr Expr Expr
-    | Equal Expr Expr Expr
-    | Same
-    | Replace Expr Expr Expr
-    | Trivial
-    | Sole
-    | Absurd
-    | IndAbsurd Expr Expr
-    | Atom
-    | Tick String
-    | U
-    | The Expr Expr
-    | Rec Ty Expr Expr Expr -- TODO Delete this later
-    | Ann Expr Ty  -- TODO Delete this later
-    deriving (Eq, Show)
-
-data Value
-    = VZero
-    | VAdd1 Value
-    | VClosure (Env Value) Name Expr
-    | VNeutral Ty Neutral
-    deriving (Show)
-
-data Neutral
-    = NVar Name
-    | NApp Neutral Normal
-    | NRec Ty Neutral Normal Normal
-    deriving (Show)
-
-data Normal
-    = Normal {normalType :: Ty, normalValue :: Value}
-    deriving (Show)
-
-type Defs = Env Normal
-
--- type stuff
-
-data Ty
-    = TNat
-    | TArr Ty Ty
-    deriving (Eq, Show)
-
-type Context = Env Ty
-initCtx :: Context
-initCtx = initEnv
+module Interpreter where
+import Header
 
 synth :: Context -> Expr -> Either Message Ty
 synth ctx (Var x) = lookupVar ctx x     -- variables
@@ -102,23 +44,6 @@ check ctx other t = do                  -- mode change
         then Right ()
         else failure ("Expected " ++ show t ++ " but got " ++ show t')
 
--- end stuff
-
-newtype Name = Name String
-    deriving (Show, Eq)
-
-newtype Env val = Env [(Name, val)]
-    deriving Show
-
-newtype Message = Message String
-    deriving Show
-
-instance Functor Env where
-    fmap f (Env xs) = Env (map (\x -> ((fst x), f (snd x))) xs)  -- Note: check this out later 
-
-initEnv :: Env val
-initEnv = Env [ ]
-
 failure :: String -> Either Message a
 failure msg = Left (Message msg)
 
@@ -143,11 +68,6 @@ eval env Zero = VZero
 eval env (Add1 n) = VAdd1 (eval env n)
 eval env (Rec t tgt base step) = doRec t (eval env tgt) (eval env base) (eval env step)
 eval env (Ann e t) = eval env e
-
-
--- doApply :: Value -> Value -> Either Message Value
--- doApply (VClosure env x body) arg = eval (extend env x arg) body
--- doApply (VNeutral neu) arg = Right (VNeutral (NApp neu arg))
 
 doApply :: Value -> Value -> Value
 doApply (VClosure env x body) arg =
@@ -221,40 +141,6 @@ addDefs defs ((x, e) : more) = do
 definedNames :: Defs -> [Name]
 definedNames (Env defs) = map fst defs
 
-
--- Church Numerals testing begin
-
-normWithTestDefs :: Expr -> Either Message Expr
-normWithTestDefs e = do 
-    defs <- addDefs noDefs
-            [(Name "two",
-              (Ann (Add1 (Add1 Zero))
-                    TNat)),
-             (Name "three",
-              (Ann (Add1 (Add1 (Add1 Zero)))
-                    TNat)),
-             (Name "+",
-              (Ann (Lambda (Name "n")
-                        (Lambda (Name "k")
-                            (Rec TNat (Var (Name "n"))
-                                (Var (Name "k"))
-                                (Lambda (Name "pred")
-                                    (Lambda (Name "almostSum")
-                                        (Add1 (Var (Name "almostSum"))))))))
-                    (TArr TNat (TArr TNat TNat))))]
-    norm <- normWithDefs defs e
-    Right (readBackNormal (definedNames defs) norm)
-
-test1, test2, test3 :: Either Message Expr
-test1 = normWithTestDefs (Var (Name "+"))
-test2 = normWithTestDefs (App (Var (Name "+"))
-                            (Var (Name "three")))
-test3 = normWithTestDefs (App (App (Var (Name "+"))
-                            (Var (Name "three")))
-                        (Var (Name "two")))
-
--- Church Numerals testing end
-
 freshen :: [Name] -> Name -> Name
 freshen used x
     | elem x used = freshen used (nextName x)
@@ -262,6 +148,3 @@ freshen used x
     
 nextName :: Name -> Name
 nextName (Name x) = Name (x ++ "'")
-
-
-
