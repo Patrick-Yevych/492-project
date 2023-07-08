@@ -29,7 +29,13 @@ data Expr
 
 data Value
     = VClosure (Env Value) Name Expr
+    | VNeutral Neutral
     deriving Show
+
+data Neutral
+    = NVar Name
+    | NApp Neutral Value
+    deriving (Show)
 
 newtype Name = Name String
     deriving (Show, Eq)
@@ -39,6 +45,9 @@ newtype Env val = Env [(Name, val)]
 
 newtype Message = Message String
     deriving Show
+
+instance Functor Env where
+    fmap f (Env xs) = Env (map (\x -> ((fst x), f (snd x))) xs)  -- Note: check this out later 
 
 initEnv :: Env val
 initEnv = Env [ ]
@@ -59,21 +68,39 @@ extend (Env env) x v = Env ((x, v) : env)
 eval :: Env Value -> Expr -> Either Message Value
 eval env (Var x) = lookupVar env x
 eval env (Lambda x body) = Right (VClosure env x body)
-eval env (App rator rand) = 
-    do fun <- eval env rator
-       arg <- eval env rand
-       doApply fun arg
+eval env (App rator rand) = do
+        fun <- eval env rator
+        arg <- eval env rand
+        doApply fun arg
+
 
 doApply :: Value -> Value -> Either Message Value
 doApply (VClosure env x body) arg = eval (extend env x arg) body
+doApply (VNeutral neu) arg = Right (VNeutral (NApp neu arg))
 
-instance Functor Env where
-    fmap f (Env xs) = Env (map (\x -> ((fst x), f (snd x))) xs)  -- Note: check this out later 
+readBack :: [Name] -> Value -> Either Message Expr
+readBack used (VNeutral (NVar x)) = Right (Var x)
+readBack used (VNeutral (NApp fun arg)) = do 
+    rator <- readBack used (VNeutral fun)
+    rand <- readBack used arg
+    Right (App rator rand)
+readBack used fun@(VClosure _ x _) = 
+    let x' = freshen used x
+    in do
+        bodyVal <- doApply fun (VNeutral (NVar x'))
+        bodyExpr <- readBack (x' : used) bodyVal
+        Right (Lambda x' bodyExpr)
 
-runProgram :: [(Name, Expr)] -> Expr -> Either Message Value
+normalize :: Expr -> Either Message Expr
+normalize expr = do 
+    val <- eval initEnv expr
+    readBack [ ] val
+
+runProgram :: [(Name, Expr)] -> Expr -> Either Message Expr
 runProgram defs expr = do 
     env <- addDefs initEnv defs
-    eval env expr
+    val <- eval env expr
+    readBack (map fst defs) val
 
 addDefs :: Env Value -> [(Name, Expr)] -> Either Message (Env Value)
 addDefs env [ ] = Right env
@@ -86,12 +113,15 @@ addDefs env ((x, e) : defs) = do
 -- Church Numerals testing begin
 
 
-test :: Either Message Value
+test :: Either Message Expr
 test =
     runProgram churchDefs
         (App (App (Var (Name "+"))
                 (toChurch 2))
             (toChurch 3))
+
+            
+            
 
 churchDefs :: [(Name, Expr)]
 churchDefs =
@@ -123,8 +153,6 @@ toChurch n
 
 -- Church Numerals testing end
 
-
-
 freshen :: [Name] -> Name -> Name
 freshen used x
     | elem x used = freshen used (nextName x)
@@ -132,3 +160,6 @@ freshen used x
     
 nextName :: Name -> Name
 nextName (Name x) = Name (x ++ "'")
+
+
+
