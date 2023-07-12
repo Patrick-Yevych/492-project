@@ -1,6 +1,4 @@
 module Test where
-import Header
-import Interpreter
 
 -- normWithTestDefs :: Expr -> Either Message Expr
 -- normWithTestDefs e = do 

@@ -1,4 +1,4 @@
-module Header where
+module Lang where
 
 data Expr
     = Var Name
