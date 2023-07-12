@@ -24,49 +24,59 @@ data Expr
     | Tick String
     | U
     | The Expr Expr
-    | Rec Ty Expr Expr Expr -- TODO Delete this later
-    | Ann Expr Ty  -- TODO Delete this later
     deriving (Eq, Show)
 
-data Ty
-    = TNat
-    | TArr Ty Ty
-    deriving (Eq, Show)
+type Ty = Value
 
 data Value
-    = VZero
+    = VPi Ty Closure
+    | VLambda Closure
+    | VSigma Ty Closure
+    | VPair Value Value
+    | VNat
+    | VZero
     | VAdd1 Value
-    | VClosure (Env Value) Name Expr
+    | VEq Ty Value Value
+    | VSame
+    | VTrivial
+    | VSole
+    | VAbsurd
+    | VAtom
+    | VTick String
+    | VU
     | VNeutral Ty Neutral
     deriving (Show)
+
+data Closure = Closure {closureEnv :: Env, closureName :: Name, closureBody :: Expr}
+    deriving Show
 
 data Neutral
     = NVar Name
     | NApp Neutral Normal
-    | NRec Ty Neutral Normal Normal
-    deriving (Show)
+    | NCar Neutral
+    | NCdr Neutral
+    | NIndNat Neutral Normal Normal Normal
+    | NReplace Neutral Normal Normal
+    | NIndAbsurd Neutral Normal
+    deriving Show
 
-data Normal
-    = Normal {normalType :: Ty, normalValue :: Value}
-    deriving (Show)
+data Normal = Normal Ty Value
+    deriving Show
 
-type Defs = Env Normal
+data CtxEntry = Def Ty Value | IsA Ty
 
-type Context = Env Ty
-initCtx :: Context
-initCtx = initEnv
-
-initEnv :: Env val
-initEnv = Env [ ]
+newtype Ctx = Ctx [(Name, CtxEntry)]
 
 newtype Name = Name String
     deriving (Show, Eq)
 
-newtype Env val = Env [(Name, val)]
+newtype Env = Env [(Name, Value)]
     deriving Show
-
-instance Functor Env where
-    fmap f (Env xs) = Env (map (\x -> ((fst x), f (snd x))) xs)  -- Note: check this out later 
 
 newtype Message = Message String
     deriving Show
+
+data Toplevel = Define Name Expr | Example Expr
+
+data Output = ExampleOutput Expr
+    deriving (Eq, Show)
