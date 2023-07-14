@@ -48,15 +48,12 @@ lookupType (Ctx ((y, e) : ctx)) x
 
 ----- EVAL -----
 
--- TODO: redefine env to be a map. This will make evalVar order O(1).
 evalVar :: Env -> Name -> Value
 evalVar (Env []) x = error ("Missing value for " ++ show x)
 evalVar (Env ((y, v) : env)) x
   | x == y = v
   | otherwise = evalVar (Env env) x
 
--- TODO: pass dlt, k here; then eval (extendEnv env x v) dlt e (\res-> k res)
--- this will break doCar, doApply, etc. will need to fix
 evalClosure :: Closure -> Value -> IR -> Value
 evalClosure (Closure env dlt x e) v k = eval (extendEnv env x v) dlt e k
 
@@ -89,7 +86,6 @@ doReplace (VNeutral (VEq ty from to) neu) mot base k = doApply mot to (\r1 ->
                     mot) 
                 (Normal r2 base)))))
 
--- TODO: may need to fix
 indNatStepType :: Value -> IR -> Value
 indNatStepType mot k =
   eval
@@ -128,18 +124,12 @@ doIndNat tgt@(VNeutral VNat neu) mot base step k = doApply mot tgt (\r1 ->
 
 eval :: Env -> Dlt -> Expr -> IR -> Value
 eval env dlt (Var x) k = k $ evalVar env x
-
 eval env dlt (Pi x dom ran) k = eval env dlt dom (\r1 ->
     k (VPi r1 (Closure env dlt x ran)))
-
--- TODO: need to add dlt to Closure as it is "part" of the env
--- see 324a3 shift
 eval env dlt (Lambda x body) k = k (VLambda (Closure env dlt x body))
-
 eval env dlt (App rator rand) k = eval env dlt rator (\r1 ->
     eval env dlt rand (\r2 ->
         doApply r1 r2 k))
-
 eval env dlt (Sigma x carType cdrType) k = eval env dlt carType (\r1->
     k (VSigma r1 (Closure env dlt x cdrType)))
 eval env dlt (Cons a d) k = eval env dlt a (\r1 ->

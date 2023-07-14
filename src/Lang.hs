@@ -83,7 +83,7 @@ type Dlt = Map.Map Name IR
 emptyDlt = Map.empty
 
 instance Show (a -> b) where
-    show _ = "k"
+    show _ = "*IR*"
 
 newtype Message = Message String
     deriving Show
