@@ -49,8 +49,10 @@ data Value
     | VTick String
     | VU
     | VNeutral Ty Neutral
+    deriving (Show)
 
 data Closure = Closure {closureEnv :: Env, closureDlt :: Dlt, closureName :: Name, closureBody :: Expr}
+    deriving Show
 
 data Neutral
     = NVar Name
@@ -60,8 +62,10 @@ data Neutral
     | NIndNat Neutral Normal Normal Normal
     | NReplace Neutral Normal Normal
     | NIndAbsurd Neutral Normal
+    deriving Show
 
 data Normal = Normal Ty Value
+    deriving Show
 
 data CtxEntry = Def Ty Value | IsA Ty
 
@@ -71,11 +75,15 @@ newtype Name = Name String
     deriving (Show, Eq, Ord)
 
 newtype Env = Env [(Name, Value)]
+    deriving Show
 
 type IR = (Value -> Value)
 
 type Dlt = Map.Map Name IR
 emptyDlt = Map.empty
+
+instance Show (a -> b) where
+    show _ = "k"
 
 newtype Message = Message String
     deriving Show
