@@ -77,7 +77,9 @@ newtype Name = Name String
 newtype Env = Env [(Name, Value)]
     deriving Show
 
-type Dlt = Map.Map Name (Value -> Value)
+type IR = (Value -> Value)
+
+type Dlt = Map.Map Name IR
 emptyDlt = Map.empty
 
 newtype Message = Message String

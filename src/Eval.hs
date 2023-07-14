@@ -53,6 +53,8 @@ evalVar (Env ((y, v) : env)) x
   | x == y = v
   | otherwise = evalVar (Env env) x
 
+-- TODO: pass dlt, k here; then eval (extendEnv env x v) dlt e (\res-> k res)
+-- this will break doCar, doApply, etc. will need to fix
 evalClosure :: Closure -> Value -> Value
 evalClosure (Closure env x e) v = eval (extendEnv env x v) e
 
@@ -117,14 +119,20 @@ doIndNat tgt@(VNeutral VNat neu) mot base step =
         (Normal (indNatStepType mot) step)
     )
 
-eval :: Env -> Dlt -> Expr -> (Value -> Value) -> Value
+eval :: Env -> Dlt -> Expr -> IR -> Value
 eval env dlt (Var x) k = k $ evalVar env x
+
 eval env dlt (Pi x dom ran) k = eval env dlt dom (\dres ->
     k (VPi dres (Closure env x ran)))
+
+-- TODO: need to add dlt to Closure as it is "part" of the env
+-- see 324a3 shift
 eval env dlt (Lambda x body) k = k (VLambda (Closure env x body))
+
 eval env dlt (App rator rand) k = eval env dlt rator (\fres ->
     eval env dlt rand (\pres ->
         k $ doApply fres pres))
+
 eval env dlt (Sigma x carType cdrType) k = eval env dlt carType (\cres->
     k (VSigma cres (Closure env x cdrType)))
 eval env dlt (Cons a d) k = eval env dlt a (\ares ->
