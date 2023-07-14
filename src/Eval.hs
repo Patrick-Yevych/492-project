@@ -84,7 +84,7 @@ indNatStepType :: Value -> Value
 indNatStepType mot =
   eval
     (Env [(Name "mot", mot)])
-    ( Pi
+    (Pi
         (Name "n-1")
         Nat
         ( Pi
@@ -99,6 +99,7 @@ indNatStepType mot =
             )
         )
     )
+    id
 
 doIndNat :: Value -> Value -> Value -> Value -> Value
 doIndNat VZero mot base step = base
@@ -115,29 +116,50 @@ doIndNat tgt@(VNeutral VNat neu) mot base step =
     )
 
 eval :: Env  -> Expr -> (Value -> Value) -> Value
-eval env (Var x) k = evalVar env x
-eval env (Pi x dom ran) k = VPi (eval env dom k) (Closure env x ran)
-eval env (Lambda x body) k = VLambda (Closure env x body)
-eval env (App rator rand) k = doApply (eval env rator k) (eval env rand k)
-eval env (Sigma x carType cdrType) k = VSigma (eval env carType k) (Closure env x cdrType)
-eval env (Cons a d) k = VPair (eval env a k) (eval env d k)
-eval env (Car e) k = doCar (eval env e k)
-eval env (Cdr e) k = doCdr (eval env e k)
-eval env Nat k = VNat
-eval env Zero k = VZero
-eval env (Add1 e) k = VAdd1 (eval env e k)
-eval env (IndNat tgt mot base step) k = doIndNat (eval env tgt k) (eval env mot k) (eval env base k) (eval env step k)
-eval env (Equal ty from to) k = VEq (eval env ty k) (eval env from k) (eval env to k)
-eval env Same k = VSame
-eval env (Replace tgt mot base) k = doReplace (eval env tgt k) (eval env mot k) (eval env base k)
-eval env Trivial k = VTrivial
-eval env Sole k = VSole
-eval env Absurd k = VAbsurd
-eval env (IndAbsurd tgt mot) k = doIndAbsurd (eval env tgt k) (eval env mot k)
-eval env Atom k = VAtom
-eval env (Tick x) k = VTick x
-eval env U k = VU
+eval env (Var x) k = k $ evalVar env x
+eval env (Pi x dom ran) k = eval env dom (\dres ->
+    k (VPi dres (Closure env x ran)))
+eval env (Lambda x body) k = k (VLambda (Closure env x body))
+eval env (App rator rand) k = eval env rator (\fres ->
+    eval env rand (\pres ->
+        k $ doApply fres pres))
+eval env (Sigma x carType cdrType) k = eval env carType (\cres->
+    k (VSigma cres (Closure env x cdrType)))
+eval env (Cons a d) k = eval env a (\ares ->
+    eval env d (\dres ->
+        k (VPair ares dres)))
+eval env (Car e) k = eval env e (\eres ->
+    k $ doCar eres)
+eval env (Cdr e) k = eval env e (\eres ->
+    k $ doCdr eres)
+eval env Nat k = k VNat
+eval env Zero k = k VZero
+eval env (Add1 e) k = eval env e (\eres ->
+    k (VAdd1 eres))
+eval env (IndNat tgt mot base step) k = eval env tgt (\tres ->
+    eval env mot (\mres ->
+        eval env base (\bres ->
+            eval env step (\sres ->
+                k $ doIndNat tres mres bres sres))))
+eval env (Equal ty from to) k = eval env ty (\tyres ->
+    eval env from (\fres ->
+        eval env to (\tores ->
+            k (VEq tyres fres tores))))
+eval env Same k = k VSame
+eval env (Replace tgt mot base) k = eval env tgt (\tres ->
+    eval env mot (\mres ->
+        eval env base (\bres ->
+            k $ doReplace tres mres bres)))
+eval env Trivial k = k VTrivial
+eval env Sole k = k VSole
+eval env Absurd k = k VAbsurd
+eval env (IndAbsurd tgt mot) k = eval env tgt (\tres ->
+    eval env mot (\mres ->
+        k $ doIndAbsurd tres mres))
+eval env Atom k = k VAtom
+eval env (Tick x) k = k (VTick x)
+eval env U k = k VU
 eval env (The ty e) k = eval env e k
 -- continuation
-eval env (Reset body) k = eval env body k
+eval env (Reset body) k = eval env body id
 eval env (Shift mu body) k = eval env body k
