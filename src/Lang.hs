@@ -49,10 +49,8 @@ data Value
     | VTick String
     | VU
     | VNeutral Ty Neutral
-    deriving (Show)
 
-data Closure = Closure {closureEnv :: Env, closureName :: Name, closureBody :: Expr}
-    deriving Show
+data Closure = Closure {closureEnv :: Env, closureDlt :: Dlt, closureName :: Name, closureBody :: Expr}
 
 data Neutral
     = NVar Name
@@ -62,20 +60,17 @@ data Neutral
     | NIndNat Neutral Normal Normal Normal
     | NReplace Neutral Normal Normal
     | NIndAbsurd Neutral Normal
-    deriving Show
 
 data Normal = Normal Ty Value
-    deriving Show
 
 data CtxEntry = Def Ty Value | IsA Ty
 
 newtype Ctx = Ctx [(Name, CtxEntry)]
 
 newtype Name = Name String
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 newtype Env = Env [(Name, Value)]
-    deriving Show
 
 type IR = (Value -> Value)
 
