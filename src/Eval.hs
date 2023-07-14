@@ -68,18 +68,6 @@ doApply :: Value -> Value -> Value
 doApply (VLambda closure) arg = evalClosure closure arg
 doApply (VNeutral (VPi dom ran) neu) arg = VNeutral (evalClosure ran arg) (NApp neu (Normal dom arg))
 
-doApp :: Env -> Dlt -> Expr -> Expr -> (Value -> Value) -> Value
-doApp env dlt rator rand k = 
-    case rator of 
-        (Var mu) -> case (Data.Map.lookup mu dlt) of
-            Just k'  -> eval env dlt rand (k.k')
-            Nothing -> error ("Missing value for " ++ show mu)
-
-        _        -> 
-            eval env dlt rator (\fres ->
-                eval env dlt rand (\pres ->
-                    k $ doApply fres pres))
-
 doIndAbsurd :: Value -> Value -> Value
 doIndAbsurd (VNeutral VAbsurd neu) mot = VNeutral mot (NIndAbsurd neu (Normal VU mot))
 
@@ -134,7 +122,9 @@ eval env dlt (Var x) k = k $ evalVar env x
 eval env dlt (Pi x dom ran) k = eval env dlt dom (\dres ->
     k (VPi dres (Closure env x ran)))
 eval env dlt (Lambda x body) k = k (VLambda (Closure env x body))
-eval env dlt (App rator rand) k = doApp env dlt rator rand k
+eval env dlt (App rator rand) k = eval env dlt rator (\fres ->
+    eval env dlt rand (\pres ->
+        k $ doApply fres pres))
 eval env dlt (Sigma x carType cdrType) k = eval env dlt carType (\cres->
     k (VSigma cres (Closure env x cdrType)))
 eval env dlt (Cons a d) k = eval env dlt a (\ares ->
@@ -175,3 +165,6 @@ eval env dlt (The ty e) k = eval env dlt e k
 -- continuation
 eval env dlt (Reset body) k = eval env dlt body id
 eval env dlt (Shift mu body) k = eval env (Data.Map.insert mu k dlt) body id
+eval env dlt (Mu mu rand) k = case (Data.Map.lookup mu dlt) of
+    Just k'  -> eval env dlt rand (k.k')
+    Nothing -> error ("Missing value for " ++ show mu)

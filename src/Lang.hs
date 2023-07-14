@@ -27,6 +27,7 @@ data Expr
     | The Expr Expr
     | Reset Expr
     | Shift Name Expr
+    | Mu Name Expr
     deriving (Eq, Show)
 
 type Ty = Value
