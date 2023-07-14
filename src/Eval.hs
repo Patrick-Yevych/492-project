@@ -82,7 +82,7 @@ doReplace (VNeutral (VEq ty from to) neu) mot base k = doApply mot to (\r1 ->
         k (VNeutral r1 
             (NReplace neu 
                 (Normal 
-                    (VPi ty (Closure (Env []) emptyDlt (Name "x") U)) 
+                    (VPi ty (Closure (Env []) initDlt (Name "x") U)) 
                     mot) 
                 (Normal r2 base)))))
 
@@ -90,7 +90,7 @@ indNatStepType :: Value -> IR -> Value
 indNatStepType mot k =
   eval
     (Env [(Name "mot", mot)])
-    emptyDlt
+    initDlt
     (Pi
         (Name "n-1")
         Nat
@@ -118,7 +118,7 @@ doIndNat tgt@(VNeutral VNat neu) mot base step k = doApply mot tgt (\r1 ->
         indNatStepType mot (\r3 ->
             k (VNeutral r1
                     (NIndNat neu
-                        (Normal (VPi VNat (Closure (Env []) emptyDlt (Name "k") U)) mot)
+                        (Normal (VPi VNat (Closure (Env []) initDlt (Name "k") U)) mot)
                         (Normal r2 base)
                         (Normal r3 step))))))
 

@@ -46,16 +46,16 @@ synth ctx (Var x) = do
     return t
 synth ctx (Pi x a b) = do 
     check ctx a VU
-    check (extendCtx ctx x (eval (mkEnv ctx) a)) b VU
+    check (extendCtx ctx x (eval (mkEnv ctx) initDlt a id)) b VU
     return VU
 synth ctx (App rator rand) = do 
     funTy <- synth ctx rator
     (a, b) <- isPi ctx funTy
     check ctx rand a
-    return (evalClosure b (eval (mkEnv ctx) rand))
+    return (evalClosure b (eval (mkEnv ctx) initDlt rand id) id)
 synth ctx (Sigma x a b) = do 
     check ctx a VU
-    check (extendCtx ctx x (eval (mkEnv ctx) a)) b VU
+    check (extendCtx ctx x (eval (mkEnv ctx) initDlt a id)) b VU
     return VU
 synth ctx (Car e) = do 
     t <- synth ctx e
@@ -64,44 +64,44 @@ synth ctx (Car e) = do
 synth ctx (Cdr e) = do 
     t <- synth ctx e
     (aT, dT) <- isSigma ctx t
-    return (evalClosure dT (doCar (eval (mkEnv ctx) e)))
+    return (evalClosure dT (doCar (eval (mkEnv ctx) initDlt e id) id) id)
 synth ctx Nat = return VU
 synth ctx (IndNat tgt mot base step) = do 
     t <- synth ctx tgt
     isNat ctx t
-    let tgtV = eval (mkEnv ctx) tgt
-        motTy = eval (Env [ ]) (Pi (Name "x") Nat U)
+    let tgtV = eval (mkEnv ctx) initDlt tgt id
+        motTy = eval (Env [ ]) initDlt (Pi (Name "x") Nat U) id
     check ctx mot motTy
-    let motV = eval (mkEnv ctx) mot
-    check ctx base (doApply motV VZero)
-    check ctx step (indNatStepType motV)
-    return (doApply motV tgtV)
+    let motV = eval (mkEnv ctx) initDlt mot id
+    check ctx base (doApply motV VZero id)
+    check ctx step (indNatStepType motV id)
+    return (doApply motV tgtV id)
 synth ctx (Equal ty from to) = do 
     check ctx ty VU
-    let tyV = eval (mkEnv ctx) ty
+    let tyV = eval (mkEnv ctx) initDlt ty id
     check ctx from tyV
     check ctx to tyV
     return VU
 synth ctx (Replace tgt mot base) = do 
     t <- synth ctx tgt
     (ty, from, to) <- isEqual ctx t
-    let motTy = eval (Env [(Name "ty", ty)]) (Pi (Name "x") (Var (Name "ty")) U)
+    let motTy = eval (Env [(Name "ty", ty)]) initDlt (Pi (Name "x") (Var (Name "ty")) U) id
     check ctx mot motTy
-    let motV = eval (mkEnv ctx) mot
-    check ctx base (doApply motV from)
-    return (doApply motV to)
+    let motV = eval (mkEnv ctx) initDlt mot id
+    check ctx base (doApply motV from id)
+    return (doApply motV to id)
 synth ctx Trivial = return VU
 synth ctx Absurd = return VU
 synth ctx (IndAbsurd tgt mot) = do 
     t <- synth ctx tgt
     isAbsurd ctx t
     check ctx mot VU
-    return (eval (mkEnv ctx) mot)
+    return (eval (mkEnv ctx) initDlt mot id)
 synth ctx Atom = return VU
 synth ctx U = return VU
 synth ctx (The ty expr) = do 
     check ctx ty VU
-    let tyV = eval (mkEnv ctx) ty
+    let tyV = eval (mkEnv ctx) initDlt ty id
     check ctx expr tyV
     return tyV
 synth ctx other =
@@ -112,13 +112,13 @@ synth ctx other =
 check :: Ctx -> Expr -> Ty -> Either Message ()
 check ctx (Lambda x body) t = do 
     (a, b) <- isPi ctx t
-    let xV = evalClosure b (VNeutral a (NVar x))
+    let xV = evalClosure b (VNeutral a (NVar x)) id
     check (extendCtx ctx x a) body xV
 check ctx (Cons a d) t = do 
     (aT, dT) <- isSigma ctx t
     check ctx a aT
-    let aV = eval (mkEnv ctx) a
-    check ctx d (evalClosure dT aV)
+    let aV = eval (mkEnv ctx) initDlt a id
+    check ctx d (evalClosure dT aV id)
 check ctx Zero t = isNat ctx t
 check ctx (Add1 n) t = do 
     isNat ctx t

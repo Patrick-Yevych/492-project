@@ -80,7 +80,7 @@ newtype Env = Env [(Name, Value)]
 type IR = (Value -> Value)
 
 type Dlt = Map.Map Name IR
-emptyDlt = Map.empty
+initDlt = Map.empty
 
 instance Show (a -> b) where
     show _ = "*IR*"
