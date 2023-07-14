@@ -1,4 +1,5 @@
 module Lang where
+import qualified Data.Map as Map
 
 data Expr
     = Var Name
@@ -74,6 +75,9 @@ newtype Name = Name String
 
 newtype Env = Env [(Name, Value)]
     deriving Show
+
+type Dlt = Map.Map Name (Value -> Value)
+emptyDlt = Map.empty
 
 newtype Message = Message String
     deriving Show

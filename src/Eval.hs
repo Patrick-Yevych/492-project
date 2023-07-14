@@ -1,5 +1,6 @@
 module Eval where
 import Lang
+import qualified Data.Map (Map, lookup, insert, empty, fromList)
 
 ----- ERROR MESSAGES -----
 
@@ -84,6 +85,7 @@ indNatStepType :: Value -> Value
 indNatStepType mot =
   eval
     (Env [(Name "mot", mot)])
+    emptyDlt
     (Pi
         (Name "n-1")
         Nat
@@ -115,51 +117,51 @@ doIndNat tgt@(VNeutral VNat neu) mot base step =
         (Normal (indNatStepType mot) step)
     )
 
-eval :: Env  -> Expr -> (Value -> Value) -> Value
-eval env (Var x) k = k $ evalVar env x
-eval env (Pi x dom ran) k = eval env dom (\dres ->
+eval :: Env -> Dlt -> Expr -> (Value -> Value) -> Value
+eval env dlt (Var x) k = k $ evalVar env x
+eval env dlt (Pi x dom ran) k = eval env dlt dom (\dres ->
     k (VPi dres (Closure env x ran)))
-eval env (Lambda x body) k = k (VLambda (Closure env x body))
-eval env (App rator rand) k = eval env rator (\fres ->
-    eval env rand (\pres ->
+eval env dlt (Lambda x body) k = k (VLambda (Closure env x body))
+eval env dlt (App rator rand) k = eval env dlt rator (\fres ->
+    eval env dlt rand (\pres ->
         k $ doApply fres pres))
-eval env (Sigma x carType cdrType) k = eval env carType (\cres->
+eval env dlt (Sigma x carType cdrType) k = eval env dlt carType (\cres->
     k (VSigma cres (Closure env x cdrType)))
-eval env (Cons a d) k = eval env a (\ares ->
-    eval env d (\dres ->
+eval env dlt (Cons a d) k = eval env dlt a (\ares ->
+    eval env dlt d (\dres ->
         k (VPair ares dres)))
-eval env (Car e) k = eval env e (\eres ->
+eval env dlt (Car e) k = eval env dlt e (\eres ->
     k $ doCar eres)
-eval env (Cdr e) k = eval env e (\eres ->
+eval env dlt (Cdr e) k = eval env dlt e (\eres ->
     k $ doCdr eres)
-eval env Nat k = k VNat
-eval env Zero k = k VZero
-eval env (Add1 e) k = eval env e (\eres ->
+eval env dlt Nat k = k VNat
+eval env dlt Zero k = k VZero
+eval env dlt (Add1 e) k = eval env dlt e (\eres ->
     k (VAdd1 eres))
-eval env (IndNat tgt mot base step) k = eval env tgt (\tres ->
-    eval env mot (\mres ->
-        eval env base (\bres ->
-            eval env step (\sres ->
+eval env dlt (IndNat tgt mot base step) k = eval env dlt tgt (\tres ->
+    eval env dlt mot (\mres ->
+        eval env dlt base (\bres ->
+            eval env dlt step (\sres ->
                 k $ doIndNat tres mres bres sres))))
-eval env (Equal ty from to) k = eval env ty (\tyres ->
-    eval env from (\fres ->
-        eval env to (\tores ->
+eval env dlt (Equal ty from to) k = eval env dlt ty (\tyres ->
+    eval env dlt from (\fres ->
+        eval env dlt to (\tores ->
             k (VEq tyres fres tores))))
-eval env Same k = k VSame
-eval env (Replace tgt mot base) k = eval env tgt (\tres ->
-    eval env mot (\mres ->
-        eval env base (\bres ->
+eval env dlt Same k = k VSame
+eval env dlt (Replace tgt mot base) k = eval env dlt tgt (\tres ->
+    eval env dlt mot (\mres ->
+        eval env dlt base (\bres ->
             k $ doReplace tres mres bres)))
-eval env Trivial k = k VTrivial
-eval env Sole k = k VSole
-eval env Absurd k = k VAbsurd
-eval env (IndAbsurd tgt mot) k = eval env tgt (\tres ->
-    eval env mot (\mres ->
+eval env dlt Trivial k = k VTrivial
+eval env dlt Sole k = k VSole
+eval env dlt Absurd k = k VAbsurd
+eval env dlt (IndAbsurd tgt mot) k = eval env dlt tgt (\tres ->
+    eval env dlt mot (\mres ->
         k $ doIndAbsurd tres mres))
-eval env Atom k = k VAtom
-eval env (Tick x) k = k (VTick x)
-eval env U k = k VU
-eval env (The ty e) k = eval env e k
+eval env dlt Atom k = k VAtom
+eval env dlt (Tick x) k = k (VTick x)
+eval env dlt U k = k VU
+eval env dlt (The ty e) k = eval env dlt e k
 -- continuation
-eval env (Reset body) k = eval env body id
-eval env (Shift mu body) k = eval env body k
+eval env dlt (Reset body) k = eval env dlt body id
+eval env dlt (Shift mu body) k = eval env (Data.Map.insert mu k dlt) body id
