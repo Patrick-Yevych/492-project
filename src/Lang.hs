@@ -24,6 +24,8 @@ data Expr
     | Tick String
     | U
     | The Expr Expr
+    | Reset Expr
+    | Shift Name Expr
     deriving (Eq, Show)
 
 type Ty = Value

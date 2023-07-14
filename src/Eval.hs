@@ -114,27 +114,30 @@ doIndNat tgt@(VNeutral VNat neu) mot base step =
         (Normal (indNatStepType mot) step)
     )
 
-eval :: Env -> Expr -> Value
-eval env (Var x) = evalVar env x
-eval env (Pi x dom ran) = VPi (eval env dom) (Closure env x ran)
-eval env (Lambda x body) = VLambda (Closure env x body)
-eval env (App rator rand) = doApply (eval env rator) (eval env rand)
-eval env (Sigma x carType cdrType) = VSigma (eval env carType) (Closure env x cdrType)
-eval env (Cons a d) = VPair (eval env a) (eval env d)
-eval env (Car e) = doCar (eval env e)
-eval env (Cdr e) = doCdr (eval env e)
-eval env Nat = VNat
-eval env Zero = VZero
-eval env (Add1 e) = VAdd1 (eval env e)
-eval env (IndNat tgt mot base step) = doIndNat (eval env tgt) (eval env mot) (eval env base) (eval env step)
-eval env (Equal ty from to) = VEq (eval env ty) (eval env from) (eval env to)
-eval env Same = VSame
-eval env (Replace tgt mot base) = doReplace (eval env tgt) (eval env mot) (eval env base)
-eval env Trivial = VTrivial
-eval env Sole = VSole
-eval env Absurd = VAbsurd
-eval env (IndAbsurd tgt mot) = doIndAbsurd (eval env tgt) (eval env mot)
-eval env Atom = VAtom
-eval env (Tick x) = VTick x
-eval env U = VU
-eval env (The ty e) = eval env e
+eval :: Env  -> Expr -> (Value -> Value) -> Value
+eval env (Var x) k = evalVar env x
+eval env (Pi x dom ran) k = VPi (eval env dom) (Closure env x ran)
+eval env (Lambda x body) k = VLambda (Closure env x body)
+eval env (App rator rand) k = doApply (eval env rator k) (eval env rand k)
+eval env (Sigma x carType cdrType) k = VSigma (eval env carType) (Closure env x cdrType)
+eval env (Cons a d) k = VPair (eval env a k) (eval env d k)
+eval env (Car e) k = doCar (eval env e k)
+eval env (Cdr e) k = doCdr (eval env e k)
+eval env Nat k = VNat
+eval env Zero k = VZero
+eval env (Add1 e) k = VAdd1 (eval env e k)
+eval env (IndNat tgt mot base step) k = doIndNat (eval env tgt k) (eval env mot k) (eval env base k) (eval env step k)
+eval env (Equal ty from to) k = VEq (eval env ty k) (eval env from k) (eval env to k)
+eval env Same k = VSame
+eval env (Replace tgt mot base) k = doReplace (eval env tgt k) (eval env mot k) (eval env base k)
+eval env Trivial k = VTrivial
+eval env Sole k = VSole
+eval env Absurd k = VAbsurd
+eval env (IndAbsurd tgt mot) k = doIndAbsurd (eval env tgt k) (eval env mot k)
+eval env Atom k = VAtom
+eval env (Tick x) k = VTick x
+eval env U k = VU
+eval env (The ty e) k = eval env e k
+-- continuation
+eval env (Reset body) k = eval env body k
+eval env (Shift mu body) k = eval env body k
