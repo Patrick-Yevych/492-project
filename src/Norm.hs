@@ -36,8 +36,8 @@ readBackTyped ctx (VPi dom ran) fun =
     x
     ( readBackTyped
         (extendCtx ctx x dom)
-        (evalClosure ran xVal)
-        (doApply fun xVal)
+        (evalClosure ran xVal id)
+        (doApply fun xVal id)
     )
   where
     x = freshen (ctxNames ctx) (closureName ran)
@@ -45,10 +45,10 @@ readBackTyped ctx (VPi dom ran) fun =
 readBackTyped ctx (VSigma aT dT) pair =
   Cons
     (readBackTyped ctx aT carVal)
-    (readBackTyped ctx (evalClosure dT carVal) cdrVal)
+    (readBackTyped ctx (evalClosure dT carVal id) cdrVal)
   where
-    carVal = doCar pair
-    cdrVal = doCdr pair
+    carVal = doCar pair id
+    cdrVal = doCdr pair id
 readBackTyped ctx VTrivial val = Sole
 readBackTyped ctx VAbsurd (VNeutral VAbsurd neu) = The Absurd (readBackNeutral ctx neu)
 readBackTyped ctx (VEq _ _ _) VSame = Same
@@ -70,7 +70,7 @@ readBackTyped ctx VU (VSigma aT dT) = Sigma x a d
       readBackTyped
         (extendCtx ctx x aT)
         VU
-        (evalClosure dT (VNeutral aT (NVar x)))
+        (evalClosure dT (VNeutral aT (NVar x)) id)
 readBackTyped ctx VU (VPi aT bT) = Pi x a b
   where
     x = freshen (ctxNames ctx) (closureName bT)
@@ -79,7 +79,7 @@ readBackTyped ctx VU (VPi aT bT) = Pi x a b
       readBackTyped
         (extendCtx ctx x aT)
         VU
-        (evalClosure bT (VNeutral aT (NVar x)))
+        (evalClosure bT (VNeutral aT (NVar x)) id)
 readBackTyped ctx VU VU = U
 readBackTyped ctx t (VNeutral t' neu) = readBackNeutral ctx neu
 readBackTyped _ otherT otherE = error $ (show otherT) ++ show otherE
