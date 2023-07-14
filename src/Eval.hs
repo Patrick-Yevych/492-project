@@ -116,10 +116,10 @@ doIndNat tgt@(VNeutral VNat neu) mot base step =
 
 eval :: Env  -> Expr -> (Value -> Value) -> Value
 eval env (Var x) k = evalVar env x
-eval env (Pi x dom ran) k = VPi (eval env dom) (Closure env x ran)
+eval env (Pi x dom ran) k = VPi (eval env dom k) (Closure env x ran)
 eval env (Lambda x body) k = VLambda (Closure env x body)
 eval env (App rator rand) k = doApply (eval env rator k) (eval env rand k)
-eval env (Sigma x carType cdrType) k = VSigma (eval env carType) (Closure env x cdrType)
+eval env (Sigma x carType cdrType) k = VSigma (eval env carType k) (Closure env x cdrType)
 eval env (Cons a d) k = VPair (eval env a k) (eval env d k)
 eval env (Car e) k = doCar (eval env e k)
 eval env (Cdr e) k = doCdr (eval env e k)
