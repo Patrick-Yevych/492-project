@@ -128,6 +128,10 @@ check ctx Same t = do
     convert ctx t from to
 check ctx Sole t = isTrivial ctx t
 check ctx (Tick a) t = isAtom ctx t
+check ctx (Clr body) t = do
+    let v = eval (mkEnv ctx) initDlt body id
+    let e = readBackTyped ctx t v
+    check ctx e t
 check ctx other t = do 
     t' <- synth ctx other
     convert ctx VU t' t
