@@ -25,9 +25,10 @@ data Expr
     | Tick String
     | U
     | The Expr Expr
-    | Reset Expr
-    | Shift Name Expr
-    | Mu Name Expr
+    | Clr Expr
+    | Shf Name Expr
+    | Cnt Name Expr
+    | Jmp Name Expr
     deriving (Eq, Show)
 
 type Ty = Value

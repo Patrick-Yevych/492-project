@@ -168,8 +168,11 @@ eval env dlt (Tick x) k = k (VTick x)
 eval env dlt U k = k VU
 eval env dlt (The ty e) k = eval env dlt e k
 -- continuation
-eval env dlt (Reset body) k = eval env dlt body id
-eval env dlt (Shift mu body) k = eval env (Data.Map.insert mu k dlt) body id
-eval env dlt (Mu mu rand) k = case Data.Map.lookup mu dlt of
+eval env dlt (Clr body) k = eval env dlt body id
+eval env dlt (Shf mu body) k = eval env (Data.Map.insert mu k dlt) body id
+eval env dlt (Cnt mu rand) k = case Data.Map.lookup mu dlt of
     Just k'  -> eval env dlt rand (k.k')
+    Nothing -> error ("Missing value for " ++ show mu)
+eval env dlt (Jmp mu rand) k = case Data.Map.lookup mu dlt of
+    Just k' -> eval env dlt rand k'
     Nothing -> error ("Missing value for " ++ show mu)
