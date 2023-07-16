@@ -1,4 +1,4 @@
-module Stack where
+module Util.Stack where
 
 newtype Stack a = Stack [a] deriving Show
 
