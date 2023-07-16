@@ -1,8 +1,9 @@
-module Top where
+import Eval
 import Lang
 import Norm
-import Eval
 import Type
+import System.Environment (getArgs)
+import System.IO (IOMode(ReadMode), openFile)
 
 toplevel :: Ctx -> Toplevel -> Either Message ([Output], Ctx)
 toplevel ctx (Define x e) =
@@ -18,3 +19,9 @@ toplevel ctx (Example e) = do
       e' = readBackTyped ctx t v
       t' = readBackTyped ctx VU t
   return ([ExampleOutput (The t' e')], ctx)
+
+main :: IO ()
+main = do
+    args <- getArgs
+    fp   <- openFile (head args) ReadMode
+    putStrLn "Hello, Haskell!"
