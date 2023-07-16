@@ -10,11 +10,16 @@ import Lang
 spaces :: Parser ()
 spaces = skipMany1 space
 
-parseVar :: Parser Expr
-parseVar = do
+parseName :: Parser Name
+parseName = do
     f <- letter
     r  <- many (letter <|> digit)
-    return $ Var (Name (f:r))
+    return $ Name (f:r)
+
+parseVar :: Parser Expr
+parseVar = do
+    nm <- parseName
+    return $ Var nm
 
 parseAtom :: Parser Expr
 parseAtom = do
@@ -30,54 +35,65 @@ desugarNat n = Add1 $ desugarNat (n-1)
 parseNum :: Parser Expr
 parseNum = liftM (desugarNat . read) $ many1 digit
 
+desugarLambda :: [Name] -> Expr -> Expr
+desugarLambda [] body = body
+desugarLambda (x:xs) body = Lambda x (desugarLambda xs body)
+
 parseLambda :: Parser Expr
 parseLambda = do
     char '('
     string "lambda"
     spaces
     char '('
-    af  <- letter
-    ar  <- many (letter <|> digit)
-    let arg = af:ar
+    args <- sepBy parseName spaces
     char ')'
     spaces
     body <- parseExpr
     char ')'
-    return $ Lambda (Name arg) body
+    return $ desugarLambda args body
+
+parseBind :: Parser (Name, Expr)
+parseBind = do
+    char '('
+    x <- parseName
+    spaces
+    xT <- parseExpr
+    char ')'
+    return $ (x, xT)
+
+desugarPi :: [(Name, Expr)] -> Expr -> Expr
+desugarPi [] body = body
+desugarPi (x:xs) body = Pi (fst x) (snd x) (desugarPi xs body)
 
 parsePi :: Parser Expr
 parsePi = do
     char '('
     string "Pi"
     spaces
-    string "(("
-    xf  <- letter
-    xr  <- many (letter <|> digit)
-    let x = xf:xr
-    spaces
-    xT <- parseExpr
-    string "))"
+    string "("
+    binds <- sepBy parseBind spaces
+    string ")"
     spaces
     body <- parseExpr
     char ')'
-    return $ Pi (Name x) xT body
+    return $ desugarPi binds body
+
+desugarSigma :: [(Name, Expr)] -> Expr -> Expr
+desugarSigma [] body = body
+desugarSigma (x : xs) body = Sigma (fst x) (snd x) (desugarSigma xs body)
 
 parseSigma :: Parser Expr
 parseSigma = do
     char '('
     string "Sigma"
     spaces
-    string "(("
-    xf  <- letter
-    xr  <- many (letter <|> digit)
-    let x = xf:xr
-    spaces
-    xT <- parseExpr
-    string "))"
+    string "("
+    binds <- sepBy parseBind spaces
+    string ")"
     spaces
     body <- parseExpr
     char ')'
-    return $ Sigma (Name x) xT body
+    return $ desugarSigma binds body
 
 parseApp :: Parser Expr
 parseApp = do
@@ -203,39 +219,33 @@ parseShf = do
     char '('
     string "shf"
     spaces
-    muf  <- letter
-    mur  <- many (letter <|> digit)
-    let mu = muf:mur
+    mu <- parseName
     spaces
     body <- parseExpr
     char ')'
-    return $ Shf (Name mu) body
+    return $ Shf mu body
 
 parseCnt :: Parser Expr
 parseCnt = do
     char '('
     string "cnt"
     spaces
-    muf  <- letter
-    mur  <- many (letter <|> digit)
-    let mu = muf:mur
+    mu <- parseName
     spaces
     app <- parseExpr
     char ')'
-    return $ Cnt (Name mu) app
+    return $ Cnt mu app
 
 parseJmp :: Parser Expr
 parseJmp = do
     char '('
     string "jmp"
     spaces
-    muf  <- letter
-    mur  <- many (letter <|> digit)
-    let mu = muf:mur
+    mu <- parseName
     spaces
     app <- parseExpr
     char ')'
-    return $ Jmp (Name mu) app
+    return $ Jmp mu app
 
 parseExpr :: Parser Expr
 parseExpr = try parseAtom
