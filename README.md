@@ -58,12 +58,14 @@ The grammar for our language is as follows:
 ```
 <expr> ::= <core>
           | 'Clr' <expr>
-          | 'Shf' <mu> <expr>
+          | 'Shf' <mu> <abstr>
+
+<abstr> ::= <expr>
           | 'Jmp' <mu> <expr>
 
 <mu> = ([a-z] | [A-Z]) ([1-9] | [a-z] | [A-Z])+
 ```
-where `<core>` is any expression in Tartlet.
+where `<core>` is any expression in core Tartlet.
 
 ## Code Organization
 
