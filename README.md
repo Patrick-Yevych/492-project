@@ -37,5 +37,12 @@ continuation passing style, and with the following signature:
 ```
 eval :: Env -> Dlt -> Expr -> IR -> Value
 ```
-Where `IR` is the type `Value -> Value`, the current continuation of the program. This will be the Intermediate Representation that the interpreter uses to represent the state of evaluation, and the structure of the program. The evaluator must now accept the current continuation _k_, as an argument. k is applied to the result of evaluating `Expr`. We implement built-ins **Clr** and **Shf** in Tartlet which
-can be used to delimit and name the current continuation into the specified mu variable. The set of mu variables are stored within context object `Dlt` (Δ), which is passed into the evaluator as an argument similar to Env. 
+Where `IR` is the type `Value -> Value`, the current continuation of the program. This will be the Intermediate Representation that the interpreter uses to represent the state of evaluation, and the structure of the program. The set of mu variables are stored within context object `Dlt` (Δ), which is passed into the evaluator as an argument similar to Env.  
+
+We then implement built-ins **Clr** and **Shf** in Tartlet which can be used to delimit and name the current continuation into the specified mu variable. So, the expression:
+```
+  (Clr
+      (+ 42
+          (Shf k C)))
+```
+names the term (+ 42 _) to the mu variable k, and evaluate the expression C with k now in Δ. Built-in **Jmp** provides function application of the mu variables to some sub-expression M in expression C. Again, when evaluating C, if `(Jmp k M)` is encountered, then the result of this function application is the result of evaluating the above expression.
