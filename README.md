@@ -45,7 +45,7 @@ We then implement built-ins **Clr** and **Shf** in Tartlet which can be used to 
       (+ 42
           (Shf k C)))
 ```
-names the term (+ 42 _) to the mu variable k, and evaluate the expression C with k now in Δ. Built-in **Jmp** provides function application of the mu variables to some sub-expression M in expression C. Again, when evaluating C, if `(Jmp k M)` is encountered, then the result of this function application is the result of evaluating the above expression.
+names the term (+ 42 _) to the mu variable k, and evaluate the expression C with k now in Δ. Built-in **Jmp** provides function application of the mu variables to some sub-expression M in expression C. Again, when evaluating C, if `(Jmp k M)` is encountered, then the result of this function application is the result of evaluating the above expression. If `(Jmp k M)` is not encountered, then the result of the evaluating the above expression is the evaluation of C.
 
 ## Code Organization
 
