@@ -46,3 +46,16 @@ We then implement built-ins **Clr** and **Shf** in Tartlet which can be used to 
           (Shf k C)))
 ```
 names the term (+ 42 _) to the mu variable k, and evaluate the expression C with k now in Δ. Built-in **Jmp** provides function application of the mu variables to some sub-expression M in expression C. Again, when evaluating C, if `(Jmp k M)` is encountered, then the result of this function application is the result of evaluating the above expression.
+
+## Code Organization
+
+Source files can be found under [/src](/src). 
+  
+  - [Eval.hs](/src/Eval.hs) is the evaluator,
+  - [Lang.hs](/src/Lang.hs) contains the language specification amongst other data types such as contexts, environments, messages, etc.
+  - [Norm.hs](/src/Norm.hs) contains the alpha equivalance checker and readback functions,
+  - [Parse.hs](/src/Parse.hs) contains the parser and desugarers,
+  - [Top.hs](/src/Top.hs) contains the top-level function,
+  - [Type.hs](/src/Type.hs) contains the type synthesizer and checker.
+
+[/app/Main.hs](/app/Main.hs) allows the cabal project to be compiled and ran.
