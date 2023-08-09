@@ -34,8 +34,6 @@ The objective of this project is to attempt to implement the lambda-mu calculus 
 semantics in the interpreter of Tartlet, explore the possible use-cases of extending the langauge in
 such a way, and how it interacts with the dependent type system.
 
-Three 
-
 The implementation of the lambda-mu calculus requires the evaluator to be re-written in
 continuation passing style, and with the following signature:
 ```
