@@ -31,7 +31,7 @@ The first naming rule describes function application of some α ∈ Δ of type (
 ## Scope
 
 The objective of this project is to attempt to implement the lambda-mu calculus typing and evaluation
-semantics in the interpreter of Tartlet, explore the possible use-cases of extending the langauge in
+semantics in the interpreter of Tartlet, explore the possible use-cases of extending the language in
 such a way, and how it interacts with the dependent type system.
 
 The implementation of the lambda-mu calculus requires the evaluator to be re-written in
