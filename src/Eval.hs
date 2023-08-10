@@ -57,6 +57,10 @@ evalVar (Env ((y, v) : env)) x
 evalClosure :: Closure -> Value -> IR -> Value
 evalClosure (Closure env dlt x e) v k = eval (extendEnv env x v) dlt e k
 
+-- evaluate just closure's body
+evalClosureBody :: Closure -> IR -> Value
+evalClosureBody (Closure env dlt x e) k = eval env dlt e k
+
 doCar :: Value -> IR -> Value
 doCar (VPair v1 v2) k = k v1
 doCar (VNeutral (VSigma aT dT) neu) k = k (VNeutral aT (NCar neu))
@@ -168,11 +172,11 @@ eval env dlt (Tick x) k = k (VTick x)
 eval env dlt U k = k VU
 eval env dlt (The ty e) k = eval env dlt e k
 -- continuation
-eval env dlt (Clr body) k = eval env dlt body id
-eval env dlt (Shf mu body) k = eval env (Data.Map.insert mu k dlt) body id
-eval env dlt (Cnt mu rand) k = case Data.Map.lookup mu dlt of
-    Just k'  -> eval env dlt rand (k.k')
-    Nothing -> error ("Missing value for " ++ show mu)
+eval env dlt (Clr body) k = k $ eval env dlt body id
+eval env dlt (Shf mu body) k = eval env (Data.Map.insert mu k dlt) body k -- instead of id. consider that (+ 2 (call/cc (lambda (k) 2))) returns 4.
+-- eval env dlt (Cnt mu rand) k = case Data.Map.lookup mu dlt of
+--     Just k'  -> eval env dlt rand (k.k')
+--     Nothing -> error ("Missing value for " ++ show mu)
 eval env dlt (Jmp mu rand) k = case Data.Map.lookup mu dlt of
     Just k' -> eval env dlt rand k'
     Nothing -> error ("Missing value for " ++ show mu)

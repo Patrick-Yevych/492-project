@@ -10,9 +10,176 @@ unexpected ctx msg t = failure (msg ++ ": " ++ show e)
     where
         e = readBackTyped ctx VU t
 
+-- (X -> Y) where input x has type a and b is a closure whose body never uses x
+-- (Pi (x X) Y)
 isPi :: Ctx -> Value -> Either Message (Ty, Closure)
 isPi _ (VPi a b) = return (a, b)
 isPi ctx other = unexpected ctx "Not a Pi type" other
+
+-- ((X3 -> Y1) -> X2) -> X1  where X3=X2=X1
+isClr :: Ctx -> Value -> Either Message (Ty, Closure)
+isClr ctx (VPi (VPi (VPi x3 y1) x2) x1) = do
+    let x1Ty = evalClosureBody x1 id -- closure x1 must not reference Ty arg. if it does, then construction of clr type fails by missing key error.
+    let x2Ty = evalClosureBody x2 id
+
+    let t1 = readBackTyped ctx VU x1Ty
+    let t2 = readBackTyped ctx VU x2Ty
+    let t3 = readBackTyped ctx VU x3
+    
+    if aEquiv t1 t2 && aEquiv t2 t3
+        then return (x3, y1)
+--        else return (Message "Improper Clr type construction")
+        else unexpected ctx "Mismatching types: Error" VU
+         
+
+isClr ctx other = unexpected ctx "Not a Clr type" other
+
+gc :: Name -> Expr -> Expr -> Expr
+gc tname texpr expr = Lambda tname (_gc tname texpr expr)
+
+_gc :: Name -> Expr -> Expr -> Expr
+_gc tname texpr (Var name) = Var name
+_gc tname texpr (Pi name a b) = Pi name (_gc tname texpr a) (_gc tname texpr b)
+_gc tname texpr (Lambda name expr) = Lambda name (_gc tname texpr expr)
+_gc tname texpr (App rator rand) = App (_gc tname texpr rator) (_gc tname texpr rand)
+_gc tname texpr (Sigma name a b) = Sigma name (_gc tname texpr a) (_gc tname texpr b)
+_gc tname texpr (Cons a d) = Cons (_gc tname texpr a) (_gc tname texpr d)
+_gc tname texpr (Car a) = Car (_gc tname texpr a)
+_gc tname texpr (Cdr d) = Cdr (_gc tname texpr d)
+_gc tname texpr Nat = Nat
+_gc tname texpr Zero = Zero
+_gc tname texpr (Add1 expr) = Add1 (_gc tname texpr expr)
+_gc tname texpr (IndNat a b c d) = IndNat (_gc tname texpr a) (_gc tname texpr b) (_gc tname texpr c) (_gc tname texpr d)
+_gc tname texpr (Equal a b c) = Equal (_gc tname texpr a) (_gc tname texpr b) (_gc tname texpr c)
+_gc tname texpr Same = Same
+_gc tname texpr (Replace a b c) = Replace (_gc tname texpr a) (_gc tname texpr b) (_gc tname texpr c)
+_gc tname texpr Trivial = Trivial
+_gc tname texpr Sole = Sole
+_gc tname texpr Absurd = Absurd
+_gc tname texpr (IndAbsurd a b) = IndAbsurd (_gc tname texpr a) (_gc tname texpr b)
+_gc tname texpr Atom = Atom
+_gc tname texpr (Tick s) = Tick s
+_gc tname texpr U = U
+_gc tname texpr (The a b) = The (_gc tname texpr a) (_gc tname texpr b)
+_gc tname texpr (Clr expr) = Clr (_gc tname texpr expr)
+_gc tname texpr (Shf name expr) =
+    if tname == name && texpr == expr
+        then Var tname
+        else Shf name expr
+_gc tname texpr (Jmp name expr) = Jmp name (_gc tname texpr expr)
+-- _gc tname texpr (Cnt name expr) = Cnt name (_gc tname texpr expr)
+
+gs :: Expr -> Either Message (Name, Expr)
+gs expr = case _gs expr of
+    (Shf tname texpr) -> Right (tname, texpr)
+    _ -> failure "Shf not found"
+
+_gs :: Expr -> Expr
+_gs (Pi name a b) = case _gs a of
+    (Shf mu expr) -> (Shf mu expr)
+    _ -> _gs b
+_gs (Lambda name body) = _gs body 
+_gs (App rator rand) = case _gs rator of
+    (Shf mu expr) -> (Shf mu expr)
+    _ -> _gs rand
+_gs (Sigma name a b) = case _gs a of
+    (Shf mu expr) -> (Shf mu expr)
+    _ -> _gs b
+_gs (Cons a d) = case _gs a of
+    (Shf mu expr) -> (Shf mu expr)
+    _ -> _gs d
+_gs (Car a) = _gs a
+_gs (Cdr d) = _gs d
+_gs (Add1 expr) = _gs expr
+_gs (IndNat a b c d) = case _gs a of
+    (Shf mu expr) -> (Shf mu expr)
+    _ -> case _gs b of
+        (Shf mu expr) -> (Shf mu expr)
+        _ -> case _gs c of
+            (Shf mu expr) -> (Shf mu expr)
+            _ -> _gs d
+_gs (Equal a b c) = case _gs a of
+    (Shf mu expr) -> (Shf mu expr)
+    _ -> case _gs b of
+        (Shf mu expr) -> (Shf mu expr)
+        _ -> _gs c
+_gs (Replace a b c) = case _gs a of
+    (Shf mu expr) -> (Shf mu expr)
+    _ -> case _gs b of
+        (Shf mu expr) -> (Shf mu expr)
+        _ -> _gs c
+_gs (IndAbsurd a b) = case _gs a of
+    (Shf mu expr) -> (Shf mu expr)
+    _ -> _gs b
+_gs (The a b) = case _gs a of
+    (Shf mu expr) -> (Shf mu expr)
+    _ -> _gs b
+_gs (Clr expr) = _gs expr
+_gs (Shf mu expr) = (Shf mu expr)
+
+-- _gs (Jmp name expr) = _gs expr
+-- _gs (Cnt name expr) = _gs expr
+    
+_gs _ = Absurd
+
+
+-- gj is analog of gs but for jump expressions. It finds and returns 
+-- the first jump expression
+
+gj :: Expr -> Either Expr (Name, Expr)
+gj expr = case _gj expr of
+    (Jmp name expr) -> Right (name, expr)
+    _ -> Left Absurd
+
+_gj :: Expr -> Expr
+_gj (Pi name a b) = case _gs a of
+    (Jmp name expr)-> (Jmp name expr)
+    _ -> _gs b
+_gj (Lambda name body) = _gs body 
+_gj (App rator rand) = case _gs rator of
+    (Jmp name expr) -> (Jmp name expr)
+    _ -> _gs rand
+_gj (Sigma name a b) = case _gs a of
+    (Jmp name expr) -> (Jmp name expr)
+    _ -> _gs b
+_gj (Cons a d) = case _gs a of
+    (Jmp name expr) -> (Jmp name expr)
+    _ -> _gs d
+_gj (Car a) = _gs a
+_gj (Cdr d) = _gs d
+_gj (Add1 expr) = _gs expr
+_gj (IndNat a b c d) = case _gs a of
+    (Jmp name expr) -> (Jmp name expr)
+    _ -> case _gs b of
+        (Jmp name expr) -> (Jmp name expr)
+        _ -> case _gs c of
+            (Jmp name expr) -> (Jmp name expr)
+            _ -> _gs d
+_gj (Equal a b c) = case _gs a of
+    (Jmp name expr) -> (Jmp name expr)
+    _ -> case _gs b of
+        (Jmp name expr) -> (Jmp name expr)
+        _ -> _gs c
+_gj (Replace a b c) = case _gs a of
+    (Jmp name expr) -> (Jmp name expr)
+    _ -> case _gs b of
+        (Jmp name expr) -> (Jmp name expr)
+        _ -> _gs c
+_gj (IndAbsurd a b) = case _gs a of
+    (Jmp name expr) -> (Jmp name expr)
+    _ -> _gs b
+_gj (The a b) = case _gs a of
+    (Jmp name expr) -> (Jmp name expr)
+    _ -> _gs b
+_gj (Clr expr) = _gs expr
+
+_gj (Shf mu expr) = _gs expr
+_gj (Jmp name expr) = (Jmp name expr)
+_gj _ = Absurd
+
+
+
+
 
 isSigma :: Ctx -> Value -> Either Message (Ty, Closure)
 isSigma _ (VSigma a b) = return (a, b)
@@ -110,10 +277,14 @@ synth ctx other =
 ----- TYPE CHECK -----
 
 check :: Ctx -> Expr -> Ty -> Either Message ()
+-- we need to understand this
+-- the closure b is not the closure of the lambda function,
+-- but rather the closure for B in the type of (Pi ((a A) B)
+-- this is important because the type B may reference a as at is a dependent type
 check ctx (Lambda x body) t = do 
     (a, b) <- isPi ctx t
     let xV = evalClosure b (VNeutral a (NVar x)) id
-    check (extendCtx ctx x a) body xV
+    check (extendCtx ctx x a) body xV -- x is of type a, and body **should** be of type xV
 check ctx (Cons a d) t = do 
     (aT, dT) <- isSigma ctx t
     check ctx a aT
@@ -128,10 +299,43 @@ check ctx Same t = do
     convert ctx t from to
 check ctx Sole t = isTrivial ctx t
 check ctx (Tick a) t = isAtom ctx t
+
+-- (Clr (+ 2 (Shf k (* 3 (Jmp k 3)))))
+-- \x -> x + 2
+-- (lambda (Name "x") (+ (Var (Name "x")) 2))
+-- (The Nat (Jmp k Body))
+-- (+ 2 (call/cc (lambda (k) (* 3 (k 3)))))
+-- the type of Clr and call/cc is ((X -> Y) -> X) -> X  OR (-> (-> (-> X Y) X) X) OR
+-- (Pi (c (Pi (b (Pi (a X) Y)) X)) X)
+-- the exact type of B is irrelevant and may be considered as ⊥ for the purposed of type checking.
 check ctx (Clr body) t = do
-    let v = eval (mkEnv ctx) initDlt body id
-    let e = readBackTyped ctx t v
-    check ctx e t
+    (x, y) <- isClr ctx t
+    let contTy = VPi x y
+    (tname, texpr) <- gs body
+    let cont = gc tname texpr body
+    check ctx cont contTy
+    check ctx (Shf tname texpr) x
+
+    -- we need to use evaluator to extract the continuation, then check that it is type (xTy -> yTy)
+    -- The top most constructor gives us the type yTy. e.g. if the first thing we see in body is Add1,
+    -- we know that yTy is of type Nat.
+    -- the type the continuation is expecting will most likely need to be found by the type of expression rand
+    -- passed into (Jmp mu rand)
+    -- for (Jmp mu rand), rand must be type xTy
+
+-- the type of the continuation bound to mu is (X -> Y).
+-- this continuation is the expression between Clr and Shf.
+-- in call/cc, the lambda function passed in is of type (X -> Y) -> X
+-- because body is simply any expr rather than the lambda function, its type is
+-- A, with the continuation (X -> Y) bound to mu in Dlt.
+check ctx (Shf mu body) t = case gj body of
+    Right (mu, rand) -> check ctx (Jmp mu rand) t
+    _ -> check ctx body t
+
+-- the type of mu is (X -> Y), and we are applying rand to mu.
+-- therefore, rand must be of type X.
+check ctx (Jmp mu rand) t = check ctx rand t
+
 check ctx other t = do 
     t' <- synth ctx other
     convert ctx VU t' t

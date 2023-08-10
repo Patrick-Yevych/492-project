@@ -225,16 +225,16 @@ parseShf = do
     char ')'
     return $ Shf mu body
 
-parseCnt :: Parser Expr
-parseCnt = do
-    char '('
-    string "cnt"
-    spaces
-    mu <- parseName
-    spaces
-    app <- parseExpr
-    char ')'
-    return $ Cnt mu app
+-- parseCnt :: Parser Expr
+-- parseCnt = do
+--     char '('
+--     string "cnt"
+--     spaces
+--     mu <- parseName
+--     spaces
+--     app <- parseExpr
+--     char ')'
+--     return $ Cnt mu app
 
 parseJmp :: Parser Expr
 parseJmp = do

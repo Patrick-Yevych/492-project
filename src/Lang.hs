@@ -27,9 +27,9 @@ data Expr
     | The Expr Expr
     | Clr Expr
     | Shf Name Expr
-    | Cnt Name Expr
     | Jmp Name Expr
     deriving (Eq, Show)
+    -- Cnt Name Expr
 
 type Ty = Value
 
