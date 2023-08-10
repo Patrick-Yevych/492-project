@@ -280,10 +280,10 @@ parseExpr = try parseAtom
     <|> try parseThe
     <|> try parseClr
     <|> try parseShf
-    <|> try parseCnt
     <|> try parseJmp
     <|> try parseApp
     <|> try parseVar
+    -- <|> try parseCnt
 
 
 printExpr :: String -> String
