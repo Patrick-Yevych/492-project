@@ -55,7 +55,9 @@ The grammar for our language is as follows:
 
 ```
 <expr> ::= <core>
-          | 'Clr' <expr>
+          | 'Clr' <cexpr>
+
+<cexpr> ::= <core>
           | 'Shf' <mu> <abstr>
 
 <abstr> ::= <expr>
