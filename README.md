@@ -18,7 +18,7 @@ Tartlet to allow proofs to be written in classical logic.
 
 The type system of the lambda-mu calculus is described by five rules:
 
-![Screenshot from 2023-08-08 19-03-46](https://github.com/Patrick-Yevych/492-project/assets/6632555/3eac4483-8c57-4fc3-b1a7-197086d3c5b4) 
+![type.png](type.png) 
 
 as seen in https://www.pls-lab.org/en/Lambda_mu_calculus.
 
@@ -55,7 +55,7 @@ names the term (+ 42 _) to the mu variable k, and evaluate the expression C with
 
 The type of the Clr/Shf/Jmp construct and call/cc is precisely Peirce’s Law under Curry-Howard Isomorphism.
 
-![Screenshot from 2023-08-10 21-13-09](https://github.com/Patrick-Yevych/492-project/assets/6632555/8f00e6b7-79dc-483d-b868-588722dfc66c)
+![type1.png](type1.png)
 
 Type checking Clr/Shf/Jmp requires helper functions to extract the continuation delimited between Clr and Shf, as well as the expression thrown to the mu variable in a Jmp call.
 These expressions are then type checked against the components of Peirce’s law. The type of the continuation must be (→ X Y) while the type of the expression thrown to the mu variable must be X.
