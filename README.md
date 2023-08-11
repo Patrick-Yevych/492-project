@@ -57,10 +57,12 @@ The grammar for our language is as follows:
 <expr> ::= <core>
           | 'Clr' <cont>
 
-<cont> ::= <core>
+<cont> ::= <cont>
+          | <core>
           | 'Shf' <mu> <abstr>
 
-<abstr> ::= <core>
+<abstr> ::= <abstr>
+          | <core>
           | 'Jmp' <mu> <core>
 
 <mu> = ([a-z] | [A-Z]) ([1-9] | [a-z] | [A-Z])+
