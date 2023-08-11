@@ -55,13 +55,13 @@ The grammar for our language is as follows:
 
 ```
 <expr> ::= <core>
-          | 'Clr' <cexpr>
+          | 'Clr' <cont>
 
-<cexpr> ::= <core>
+<cont> ::= <core>
           | 'Shf' <mu> <abstr>
 
-<abstr> ::= <expr>
-          | 'Jmp' <mu> <expr>
+<abstr> ::= <core>
+          | 'Jmp' <mu> <core>
 
 <mu> = ([a-z] | [A-Z]) ([1-9] | [a-z] | [A-Z])+
 ```
