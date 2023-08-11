@@ -34,6 +34,8 @@ The objective of this project is to attempt to implement the lambda-mu calculus 
 semantics in the interpreter of Tartlet, explore the possible use-cases of extending the language in
 such a way, and how it interacts with the dependent type system.
 
+### Writing the Evaluator
+
 The implementation of the lambda-mu calculus requires the evaluator to be re-written in
 continuation passing style, and with the following signature:
 ```
@@ -48,6 +50,16 @@ We then implement built-ins **Clr** and **Shf** in Tartlet which can be used to 
           (Shf k C)))
 ```
 names the term (+ 42 _) to the mu variable k, and evaluate the expression C with k now in Δ. Built-in **Jmp** provides function application of the mu variables to some sub-expression M in expression C. Again, when evaluating C, if `(Jmp k M)` is encountered, then the result of this function application is the result of evaluating the above expression. If `(Jmp k M)` is not encountered, then the result of the evaluating the above expression is the evaluation of C.
+
+### Type checking
+
+The type of the Clr/Shf/Jmp construct and call/cc is precisely Peirce’s Law under Curry-Howard Isomorphism.
+
+![Screenshot from 2023-08-10 21-13-09](https://github.com/Patrick-Yevych/492-project/assets/6632555/8f00e6b7-79dc-483d-b868-588722dfc66c)
+
+Type checking Clr/Shf/Jmp requires helper functions to extract the continuation delimited between Clr and Shf, as well as the expression thrown to the mu variable in a Jmp call.
+These expressions are then type checked against the components of Peirce’s law. The type of the continuation must be (→ X Y) while the type of the expression thrown to the mu variable must be X.
+Since the existing continuation within Shf is discarded upon calling Jmp, the type Y is never used, and may be taken to be the Absurd type (⊥). Regardless, the type of the shift body must be X should Jmp not be present. 
 
 ## Grammar
 
@@ -81,3 +93,14 @@ Source files can be found under [/src](/src).
   - [Type.hs](/src/Type.hs) contains the type synthesizer and checker.
 
 [/app/Main.hs](/app/Main.hs) allows the cabal project to be compiled and ran.
+
+## References
+
+[1] Leroy, X. (n.d.). Programming = proving? The Curry-Howard correspondence today Fourth lecture You’ve got to decide one way or the other! Classical logic, continuations, and control operators. Retrieved July 21, 2023, from https://xavierleroy.org/CdF/2018-2019/4.pdf
+
+[2] Michel Parigot (1992). λμ-Calculus: An algorithmic interpretation of classical natural deduction. Lecture Notes in Computer Science. Vol. 624. pp. 190–201. doi:10.1007/BFb0013061. ISBN 3-540-55727-X.
+
+[‌3] Wikibooks. (n.d.). En.wikibooks.org. https://en.wikibooks.org/wiki Write_Yourself_a_Scheme_in_48_Hours/Parsing
+
+[4] Christiansen, D. (2019). Checking Dependent Types with Normalization by Evaluation: A Tutorial (Haskell Version). https://davidchristiansen.dk/tutorials/implementing-types-hs.pdf
+
