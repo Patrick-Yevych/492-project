@@ -2,9 +2,10 @@
 
 ## Goal
 
-This repository extends Tartlet with continuations. The user will be able to manipulate
-continuations using three new added operations: Shift, Clear and Jump. The addition of 
-these operations enables one to prove classical logic theorems using Tartlet.
+The goal of this project is to enable Tartlet to prove classical logic theorems. In order
+to achieve that, this repository extends Tartlet with continuations. The user will be 
+able to manipulate continuations using three new added operations: Shift, Clear and Jump. 
+The addition of these operations enables one to prove classical logic theorems using Tartlet.
 
 ## Motivation
 
@@ -73,10 +74,6 @@ The first three rules are the same as simply typed lambda calculus (variable int
 Lambda-Mu Calculus introduces the concept of mu (μ) variables, which exist in the delta (Δ) context; seperate from that of the lambda variables. Δ is a map of μ variables to named terms. A named terms can be interpreted as a second class continuation; a unary function describing the subsequent steps of computation the interpreter must follow.
 
 The first naming rule describes function application of some α ∈ Δ of type (→ A Absurd) on an unnamed term M of type A. The second naming rule describes the mu abstraction μα.c . The computational interpretation of a mu abstraction is to capture/name the current continuation and then evaluate the expression c. If at any point during the evaluation of c, α is applied to some sub-expression M, then the result of the function application (α M) is the value of the mu abstraction.
-
-
-
-
 
 ## Scope
 
