@@ -48,7 +48,17 @@ following function by turning the underscore into a free variable:
 
 Intuitively, the continuation of an expression is everything "outside" of the expression itself.
 
+Typically, when manipulating coninuations, a function named shift is defined. For any expression 
+(shift k body), the continuation of the shift expression is bound to k as a function, and the body 
+is evaluated (without evaluating the continuation). Here are some examples:
 
+(+ (shift k (+ 1 1)) 10) = (+ 1 1) = 2
+
+(+ (shift k (+ 1 (k 5))) 4) = (+ 1 (k 5)) = (+ 1 ((lambda x (+ x 4)) 5))
+
+(+ (shift k (k (+ 2 2))) 4) = ((lambda x (+ x 4)) (+ 2 2))
+
+Additional resources on continuations: https://docs.racket-lang.org/guide/conts.html
 
 ## Lambda-Mu Calculus
 
