@@ -17,12 +17,35 @@ down, simplified version of Pie which is also dependently typed.
 The concept of programs as proofs is known as the Curry-Howard Isomorphism, and several types 
 of lambda calculi have been derived to expand the domain of proofs that one can program. 
 
-A particularly interesting calculi is the lambda-mu calculus,
-first introduced by M. Parigot (https://doi.org/10.2307/2275652). This is an extension to the 
-lambda calculus which enables the programmer to bind arbitrary sub-expressions to variables. 
-Programmatically, this translates to implementing continuation based control flow operators 
-one could find in functional languages. Proof-wise, this would expand the logic system of Tartlet 
-to allow proofs to be written in classical logic.
+A particularly interesting calculi is the lambda-mu calculus, first introduced by 
+M. Parigot (https://doi.org/10.2307/2275652). This is an extension to the lambda calculus
+which enables the programmer to bind arbitrary sub-expressions to variables. Programmatically, 
+this translates to implementing continuation based control flow operators one could find in 
+functional languages. Proof-wise, this would expand the logic system of Tartlet to allow proofs 
+to be written in classical logic.
+
+## Continuations
+
+A continuation can be thought of as the context of an expression. It is easiest explained with
+examples. Consider the following Racket-like expression:
+
+(+ ((lambda x (+ x 1)) 2) 5)
+
+For each sub-expression above, we identify the continuation by substituting the sub-expression 
+with an underscore like so:
+
+Continuation of 2: (+ ((lambda x (+ x 1)) _) 5)
+Continuation of ((lambda x (+ x 1)) 2): (+ _ 5)
+Continuation of (lambda x (+ x 1)): (+ _ 2) 5)
+
+This yields us a context which can easily be adapted into a function, by treating the underscore
+as a parameter. For instance, the continuation of ((lambda x (+ x 1)) 2) can be turned into the 
+following function by turning the underscore into a free variable:
+
+((lambda n (+ n 5)))
+
+
+
 
 ## Lambda-Mu Calculus
 
@@ -38,7 +61,7 @@ Lambda-Mu Calculus introduces the concept of mu (μ) variables, which exist in t
 
 The first naming rule describes function application of some α ∈ Δ of type (→ A Absurd) on an unnamed term M of type A. The second naming rule describes the mu abstraction μα.c . The computational interpretation of a mu abstraction is to capture/name the current continuation and then evaluate the expression c. If at any point during the evaluation of c, α is applied to some sub-expression M, then the result of the function application (α M) is the value of the mu abstraction.
 
-## Continuations
+
 
 
 
