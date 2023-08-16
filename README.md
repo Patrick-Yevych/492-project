@@ -49,7 +49,7 @@ following function by turning the underscore into a free variable:
 
 Intuitively, the continuation of an expression is everything "outside" of the expression itself.
 
-Typically, when manipulating coninuations, a function named shift is defined. For any expression 
+Typically, when manipulating continuations, a new operation called shift is added. For any expression 
 (shift k body), the continuation of the shift expression is bound to k as a function, and the body 
 is evaluated (without evaluating the continuation). Here are some examples:
 
@@ -80,6 +80,12 @@ The first naming rule describes function application of some α ∈ Δ of type (
 The objective of this project is to attempt to implement the lambda-mu calculus typing and evaluation
 semantics in the interpreter of Tartlet, explore the possible use-cases of extending the language in
 such a way, and how it interacts with the dependent type system.
+
+## Added operations
+
+Three new operations are added to Tartlett: Shift, Jump and Clear.
+
+
 
 ### Writing the Evaluator
 
