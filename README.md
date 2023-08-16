@@ -88,7 +88,23 @@ Three new operations are added to Tartlett: Shift, Jump and Clear.
 The shift operation works similarly to the shift described in the continuations section. The syntax of 
 a shift expression is as follows:
 
-(shift)
+(shf name body)
+
+Here, once again, the continuation of the expression is bound to the variable name. The continuation of the
+expression is not evaluated, but instead the body is. The only difference is that name is a second class variable,
+stored in an additional environment called delta. All continuation variables are stored in delta.
+
+The clear operation simply serves to delimit the continuation captured by a shift sub-expression. The syntax of clear is
+as follows:
+
+(clr body)
+
+Here, body is once again any expression. The above expression results in body getting evaluated normally. However, any shift 
+sub-expression of body has its continuation delimitted by the clear. Here is an example:
+
+(add1 (add1 (shf n (lambda x (n x))))) = (lambda x (add1 (add1 x))) - Without clear
+
+(add1 (clr (add1 (shf n (lambda x (n x)))))) = (lambda x (add1 x)) - With clear
 
 
 
