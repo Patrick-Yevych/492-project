@@ -34,8 +34,15 @@ isClr ctx (VPi (VPi (VPi x3 y1) x2) x1) = do
 
 isClr ctx other = unexpected ctx "Not a Clr type" other
 
+-- gc takes an expression (expr) its type (texpr) and a name (tname).
+-- gc then gets the continuation of the expression and binds it to 
+-- the name. gc utilizes its helper function _gc.
+
+
 gc :: Name -> Expr -> Expr -> Expr
 gc tname texpr expr = Lambda tname (_gc tname texpr expr)
+
+-- _gc is a helper for gc.
 
 _gc :: Name -> Expr -> Expr -> Expr
 _gc tname texpr (Var name) = Var name
@@ -69,10 +76,16 @@ _gc tname texpr (Shf name expr) =
 _gc tname texpr (Jmp name expr) = Jmp name (_gc tname texpr expr)
 -- _gc tname texpr (Cnt name expr) = Cnt name (_gc tname texpr expr)
 
+-- gs takes an expression (expr) as input and finds the the first shift sub-expression
+-- within expr with respect to the order of evaluation of eval. If there is no shift 
+-- subsexpression, an appropriate message is displayed. gs utilizes _gs as a helper.
+
 gs :: Expr -> Either Message (Name, Expr)
 gs expr = case _gs expr of
     (Shf tname texpr) -> Right (tname, texpr)
     _ -> failure "Shf not found"
+
+-- _gs is a helper function for gs.
 
 _gs :: Expr -> Expr
 _gs (Pi name a b) = case _gs a of
@@ -123,13 +136,16 @@ _gs (Shf mu expr) = (Shf mu expr)
 _gs _ = Absurd
 
 
--- gj is analog of gs but for jump expressions. It finds and returns 
--- the first jump expression
+-- gj takes an expression (expr) as input and finds the the first jump sub-expression
+-- within expr with respect to the order of evaluation of eval. If there is no jump 
+-- subsexpression, an appropriate message is displayed. gj utilizes _gj as a helper.
 
 gj :: Expr -> Either Expr (Name, Expr)
 gj expr = case _gj expr of
     (Jmp name expr) -> Right (name, expr)
     _ -> Left Absurd
+
+-- _gj is a helper function for gj.
 
 _gj :: Expr -> Expr
 _gj (Pi name a b) = case _gs a of
