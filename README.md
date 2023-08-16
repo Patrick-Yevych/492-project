@@ -94,6 +94,17 @@ Here, once again, the continuation of the expression is bound to the variable na
 expression is not evaluated, but instead the body is. The only difference is that name is a second class variable,
 stored in an additional environment called delta. All continuation variables are stored in delta.
 
+Next, the jump operation is the method by which bound continuation variables may be called within the body of a shift expression.
+The special operation of jump is necessary, as continuation variables are second-class, necessitating a special way of using them.
+The syntax of the jump operation is as follows:
+
+(jmp name body)
+
+The jump operation stops the evaluation of its continuation, and applies the continuation variable bound to name to the body expression.
+Here is an example:
+
+(add1 (add1 (shf n (jmp n 0)))) = (add1 (add1 0))
+
 The clear operation simply serves to delimit the continuation captured by a shift sub-expression. The syntax of clear is
 as follows:
 
@@ -102,10 +113,7 @@ as follows:
 Here, body is once again any expression. The above expression results in body getting evaluated normally. However, any shift 
 sub-expression of body has its continuation delimitted by the clear. Here is an example:
 
-(add1 (add1 (shf n (lambda x (n x))))) = (lambda x (add1 (add1 x))) - Without clear
-
-(add1 (clr (add1 (shf n (lambda x (n x)))))) = (lambda x (add1 x)) - With clear
-
+(add1 (clr (add1 (shf n (jmp n 0))))) = (add1 0) 
 
 
 ### Writing the Evaluator
