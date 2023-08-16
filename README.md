@@ -1,18 +1,28 @@
 # 492-project
 
+## Goal
+
+This repository extends Tartlet with continuations. The user will be able to manipulate
+continuations using three new added operations: Shift, Clear and Jump. The addition of 
+these operations enables one to prove classical logic theorems using Tartlet.
+
 ## Motivation
 
 The book “The Little Typer” introduces the concept of dependent types as a means of writing
 programs that double as proofs for claims in intuitionistic logic. Dependent types are types
-whose definition depends on values. This enables the programmer to define the semantics of
-their program more expressively. The concept of programs as proofs is known as Curry-Howard
-Isomorphism, and several types of lambda calculi have been derived to expand the domain of
-proofs that one can program. A particularly interesting calculi is the lambda-mu calculus,
+whose definition depends on values. The programming language Pie supports dependent types,
+and is used to introduce the concept itself in “The Little Typer”. Tartlet is a stripped 
+down, simplified version of Pie which is also dependently typed.
+
+The concept of programs as proofs is known as the Curry-Howard Isomorphism, and several types 
+of lambda calculi have been derived to expand the domain of proofs that one can program. 
+
+A particularly interesting calculi is the lambda-mu calculus,
 first introduced by M. Parigot (https://doi.org/10.2307/2275652). This is an extension to the 
-lambda calculus which enables the programmer to “freeze” sub-expressions to be later abstracted on. 
-Programmatically, this translates to implementing continuation based control flow operators one 
-could find in functional languages. Proof-wise, this would expand the logic system of 
-Tartlet to allow proofs to be written in classical logic.
+lambda calculus which enables the programmer to bind arbitrary sub-expressions to variables. 
+Programmatically, this translates to implementing continuation based control flow operators 
+one could find in functional languages. Proof-wise, this would expand the logic system of Tartlet 
+to allow proofs to be written in classical logic.
 
 ## Lambda-Mu Calculus
 
@@ -27,6 +37,10 @@ The first three rules are the same as simply typed lambda calculus (variable int
 Lambda-Mu Calculus introduces the concept of mu (μ) variables, which exist in the delta (Δ) context; seperate from that of the lambda variables. Δ is a map of μ variables to named terms. A named terms can be interpreted as a second class continuation; a unary function describing the subsequent steps of computation the interpreter must follow.
 
 The first naming rule describes function application of some α ∈ Δ of type (→ A Absurd) on an unnamed term M of type A. The second naming rule describes the mu abstraction μα.c . The computational interpretation of a mu abstraction is to capture/name the current continuation and then evaluate the expression c. If at any point during the evaluation of c, α is applied to some sub-expression M, then the result of the function application (α M) is the value of the mu abstraction.
+
+## Continuations
+
+
 
 ## Scope
 
