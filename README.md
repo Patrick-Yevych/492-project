@@ -85,6 +85,11 @@ such a way, and how it interacts with the dependent type system.
 
 Three new operations are added to Tartlett: Shift, Jump and Clear.
 
+The shift operation works similarly to the shift described in the continuations section. The syntax of 
+a shift expression is as follows:
+
+(shift)
+
 
 
 ### Writing the Evaluator
