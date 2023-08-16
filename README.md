@@ -35,15 +35,18 @@ For each sub-expression above, we identify the continuation by substituting the 
 with an underscore like so:
 
 Continuation of 2: (+ ((lambda x (+ x 1)) _) 5)
+
 Continuation of ((lambda x (+ x 1)) 2): (+ _ 5)
-Continuation of (lambda x (+ x 1)): (+ _ 2) 5)
+
+Continuation of (lambda x (+ x 1)): (+ ( _ 2) 5)
 
 This yields us a context which can easily be adapted into a function, by treating the underscore
 as a parameter. For instance, the continuation of ((lambda x (+ x 1)) 2) can be turned into the 
 following function by turning the underscore into a free variable:
 
-((lambda n (+ n 5)))
+(lambda n (+ n 5))
 
+Intuitively, the continuation of an expression is everything "outside" of the expression itself.
 
 
 
