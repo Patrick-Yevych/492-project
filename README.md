@@ -1,18 +1,65 @@
 # 492-project
 
+## Goal
+
+The goal of this project is to enable Tartlet to prove classical logic theorems. In order
+to achieve that, this repository extends Tartlet with continuations. The user will be 
+able to manipulate continuations using three new added operations: Shift, Clear and Jump. 
+The addition of these operations enables one to prove classical logic theorems using Tartlet.
+
 ## Motivation
 
 The book “The Little Typer” introduces the concept of dependent types as a means of writing
 programs that double as proofs for claims in intuitionistic logic. Dependent types are types
-whose definition depends on values. This enables the programmer to define the semantics of
-their program more expressively. The concept of programs as proofs is known as Curry-Howard
-Isomorphism, and several types of lambda calculi have been derived to expand the domain of
-proofs that one can program. A particularly interesting calculi is the lambda-mu calculus,
-first introduced by M. Parigot (https://doi.org/10.2307/2275652). This is an extension to the 
-lambda calculus which enables the programmer to “freeze” sub-expressions to be later abstracted on. 
-Programmatically, this translates to implementing continuation based control flow operators one 
-could find in functional languages. Proof-wise, this would expand the logic system of 
-Tartlet to allow proofs to be written in classical logic.
+whose definition depends on values. The programming language Pie supports dependent types,
+and is used to introduce the concept itself in “The Little Typer”. Tartlet is a stripped 
+down, simplified version of Pie which is also dependently typed.
+
+The concept of programs as proofs is known as the Curry-Howard Isomorphism, and several types 
+of lambda calculi have been derived to expand the domain of proofs that one can program. 
+
+A particularly interesting calculi is the lambda-mu calculus, first introduced by 
+M. Parigot (https://doi.org/10.2307/2275652). This is an extension to the lambda calculus
+which enables the programmer to bind arbitrary sub-expressions to variables. Programmatically, 
+this translates to implementing continuation based control flow operators one could find in 
+functional languages. Proof-wise, this would expand the logic system of Tartlet to allow proofs 
+to be written in classical logic.
+
+## Continuations
+
+A continuation can be thought of as the context of an expression. It is easiest explained with
+examples. Consider the following Racket-like expression:
+
+(+ ((lambda x (+ x 1)) 2) 5)
+
+For each sub-expression above, we identify the continuation by substituting the sub-expression 
+with an underscore like so:
+
+Continuation of 2: (+ ((lambda x (+ x 1)) _) 5)
+
+Continuation of ((lambda x (+ x 1)) 2): (+ _ 5)
+
+Continuation of (lambda x (+ x 1)): (+ ( _ 2) 5)
+
+This yields us a context which can easily be adapted into a function, by treating the underscore
+as a parameter. For instance, the continuation of ((lambda x (+ x 1)) 2) can be turned into the 
+following function by turning the underscore into a free variable:
+
+(lambda n (+ n 5))
+
+Intuitively, the continuation of an expression is everything "outside" of the expression itself.
+
+Typically, when manipulating continuations, a new operation called shift is added. For any expression 
+(shift k body), the continuation of the shift expression is bound to k as a function, and the body 
+is evaluated (without evaluating the continuation). Here are some examples:
+
+(+ (shift k (+ 1 1)) 10) = (+ 1 1) = 2
+
+(+ (shift k (+ 1 (k 5))) 4) = (+ 1 (k 5)) = (+ 1 ((lambda x (+ x 4)) 5))
+
+(+ (shift k (k (+ 2 2))) 4) = ((lambda x (+ x 4)) (+ 2 2))
+
+Additional resources on continuations: https://docs.racket-lang.org/guide/conts.html
 
 ## Lambda-Mu Calculus
 
@@ -33,6 +80,41 @@ The first naming rule describes function application of some α ∈ Δ of type (
 The objective of this project is to attempt to implement the lambda-mu calculus typing and evaluation
 semantics in the interpreter of Tartlet, explore the possible use-cases of extending the language in
 such a way, and how it interacts with the dependent type system.
+
+## Added operations
+
+Three new operations are added to Tartlett: Shift, Jump and Clear.
+
+The shift operation works similarly to the shift described in the continuations section. The syntax of 
+a shift expression is as follows:
+
+(shf name body)
+
+Here, once again, the continuation of the expression is bound to the variable name. The continuation of the
+expression is not evaluated, but instead the body is. The only difference is that name is a second class variable,
+stored in an additional environment called delta. All continuation variables are stored in delta.
+
+Next, the jump operation is the method by which bound continuation variables may be called within the body of a shift expression.
+The special operation of jump is necessary, as continuation variables are second-class, necessitating a special way of using them.
+The syntax of the jump operation is as follows:
+
+(jmp name body)
+
+The jump operation stops the evaluation of its continuation, and applies the continuation variable bound to name to the body expression.
+Here is an example:
+
+(add1 (add1 (shf n (jmp n 0)))) = (add1 (add1 0))
+
+The clear operation simply serves to delimit the continuation captured by a shift sub-expression. The syntax of clear is
+as follows:
+
+(clr body)
+
+Here, body is once again any expression. The above expression results in body getting evaluated normally. However, any shift 
+sub-expression of body has its continuation delimitted by the clear. Here is an example:
+
+(add1 (clr (add1 (shf n (jmp n 0))))) = (add1 0) 
+
 
 ### Writing the Evaluator
 
